@@ -823,6 +823,7 @@ dependencies = [
     { name = "pyarrow" },
     { name = "pyyaml" },
     { name = "requests" },
+    { name = "yfinance" },
 ]
 
 [package.optional-dependencies]
@@ -832,7 +833,6 @@ ml = [
     { name = "scipy" },
     { name = "torch" },
     { name = "transformers" },
-    { name = "yfinance" },
 ]
 
 [package.dev-dependencies]
@@ -853,7 +853,7 @@ requires-dist = [
     { name = "scipy", marker = "extra == 'ml'" },
     { name = "torch", marker = "extra == 'ml'" },
     { name = "transformers", marker = "extra == 'ml'" },
-    { name = "yfinance", marker = "extra == 'ml'" },
+    { name = "yfinance" },
 ]
 provides-extras = ["ml"]
 

@@ -11,13 +11,13 @@ dependencies = [
     "pandas",
     "pyarrow",
     "pyyaml",
+    "yfinance",
 ]
 
 [project.optional-dependencies]
 # Heavy ML stack: declared but NOT installed by default. Install with:
 #   uv sync --extra ml
 ml = [
-    "yfinance",
     "transformers",
     "torch",
     "scipy",
