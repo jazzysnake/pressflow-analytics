@@ -1,0 +1,39 @@
+# pressflow default configuration (ADR-0015).
+# Single source of truth for costs, Kelly sizing, window, models and paths.
+# All values are validated by ``pressflow.config.get_config``.
+
+forum:
+  base_url: https://forum.portfolio.hu/topics/otp-reszvenyesek-ide/5224
+  thread_id: 5224
+
+# Analysis window in years (ADR-0006 — 10 years).
+window_years: 10
+
+# Round-trip transaction costs as a fraction of turnover (ADR-0012).
+costs:
+  base: 0.003
+  low: 0.0015
+  high: 0.006
+
+# Fractional Kelly sizing (ADR-0009).
+kelly:
+  k: 0.25
+  shrink_gamma: 0.5
+  cap: 1.0
+
+# Sentiment model ids, in preference order.
+models:
+  - NYTK/sentiment-hts5-xlm-roberta-hungarian
+  - NYTK/sentiment-ohb3-xlm-roberta-hungarian
+  - cardiffnlp/twitter-xlm-roberta-base-sentiment
+
+# Scraping politeness (ADR-0015 — ~0.35s delay, retry+backoff).
+scraping:
+  delay_sec: 0.35
+  retries: 3
+
+# Data locations (ADR-0015 — Parquet under data/).
+paths:
+  data: data
+  raw: data/raw
+  processed: data/processed

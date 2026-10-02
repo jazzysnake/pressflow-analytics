@@ -1,0 +1,19 @@
+# Data artifacts — never commit scraped/processed data
+data/**
+!data/.gitkeep
+*.parquet
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+
+# Tooling / editor
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# pi agent internals
+.pi/
+.pytest_cache/
