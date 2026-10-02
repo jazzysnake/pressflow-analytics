@@ -17,9 +17,11 @@ VALID_YAML = textwrap.dedent(
     costs: { base: 0.003, low: 0.0015, high: 0.006 }
     kelly: { k: 0.25, shrink_gamma: 0.5, cap: 1.0 }
     models:
-      - NYTK/sentiment-hts5-xlm-roberta-hungarian
-      - NYTK/sentiment-ohb3-xlm-roberta-hungarian
-      - cardiffnlp/twitter-xlm-roberta-base-sentiment
+      default: NYTK/sentiment-hts5-xlm-roberta-hungarian
+      candidates:
+        - NYTK/sentiment-hts5-xlm-roberta-hungarian
+        - NYTK/sentiment-ohb3-xlm-roberta-hungarian
+        - cardiffnlp/twitter-xlm-roberta-base-sentiment
     scraping: { delay_sec: 0.35, retries: 3 }
     paths: { data: data, raw: data/raw, processed: data/processed }
     """
@@ -43,8 +45,10 @@ def test_default_config_loads():
     assert cfg.kelly.k == 0.25
     assert cfg.kelly.shrink_gamma == 0.5
     assert cfg.kelly.cap == 1.0
-    assert len(cfg.models) == 3
-    assert cfg.models[0] == "NYTK/sentiment-hts5-xlm-roberta-hungarian"
+    assert len(cfg.models.candidates) == 3
+    assert cfg.models.candidates[0] == "NYTK/sentiment-hts5-xlm-roberta-hungarian"
+    assert cfg.models.default == "NYTK/sentiment-hts5-xlm-roberta-hungarian"
+    assert cfg.models.default in cfg.models.candidates
     assert cfg.scraping.delay_sec == 0.35
     assert cfg.scraping.retries == 3
     assert cfg.paths.data == "data"
@@ -102,15 +106,32 @@ def test_wrong_type_raises(tmp_path):
         load_config(_write(tmp_path, text))
 
 
-def test_models_must_be_non_empty_list(tmp_path):
+def test_models_candidates_must_be_non_empty_list(tmp_path):
     text = VALID_YAML.replace(
-        "models:\n"
-        "  - NYTK/sentiment-hts5-xlm-roberta-hungarian\n"
-        "  - NYTK/sentiment-ohb3-xlm-roberta-hungarian\n"
-        "  - cardiffnlp/twitter-xlm-roberta-base-sentiment\n",
-        "models: []\n",
+        "  candidates:\n"
+        "    - NYTK/sentiment-hts5-xlm-roberta-hungarian\n"
+        "    - NYTK/sentiment-ohb3-xlm-roberta-hungarian\n"
+        "    - cardiffnlp/twitter-xlm-roberta-base-sentiment\n",
+        "  candidates: []\n",
     )
-    with pytest.raises(ConfigError, match="models: expected a non-empty list"):
+    with pytest.raises(ConfigError, match="models.candidates: expected a non-empty list"):
+        load_config(_write(tmp_path, text))
+
+
+def test_models_default_must_be_a_candidate(tmp_path):
+    text = VALID_YAML.replace(
+        "  default: NYTK/sentiment-hts5-xlm-roberta-hungarian",
+        "  default: some/other-model",
+    )
+    with pytest.raises(ConfigError, match="models.default .* must be one of"):
+        load_config(_write(tmp_path, text))
+
+
+def test_models_missing_default_raises(tmp_path):
+    text = VALID_YAML.replace(
+        "  default: NYTK/sentiment-hts5-xlm-roberta-hungarian\n", ""
+    )
+    with pytest.raises(ConfigError, match="models: missing required key 'default'"):
         load_config(_write(tmp_path, text))
 
 

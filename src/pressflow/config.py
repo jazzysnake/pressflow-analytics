@@ -80,12 +80,18 @@ class Paths:
 
 
 @dataclass(frozen=True)
+class Models:
+    default: str
+    candidates: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class Config:
     forum: Forum
     window_years: int
     costs: Costs
     kelly: Kelly
-    models: tuple[str, ...]
+    models: Models
     scraping: Scraping
     paths: Paths
 
@@ -188,10 +194,26 @@ def _parse_kelly(raw: Any) -> Kelly:
     )
 
 
-def _parse_models(raw: Any) -> tuple[str, ...]:
+def _parse_candidates(raw: Any) -> tuple[str, ...]:
     if not isinstance(raw, list) or not raw:
-        raise ConfigError(f"models: expected a non-empty list, got {type(raw).__name__}")
-    return tuple(_as_str(item, f"models[{i}]") for i, item in enumerate(raw))
+        raise ConfigError(
+            f"models.candidates: expected a non-empty list, got {type(raw).__name__}"
+        )
+    return tuple(
+        _as_str(item, f"models.candidates[{i}]") for i, item in enumerate(raw)
+    )
+
+
+def _parse_models(raw: Any) -> Models:
+    m = _mapping(raw, "models")
+    candidates = _parse_candidates(_require(m, "candidates", "models"))
+    default = _as_str(_require(m, "default", "models"), "models.default")
+    if default not in candidates:
+        raise ConfigError(
+            f"models.default {default!r} must be one of models.candidates "
+            f"{list(candidates)}"
+        )
+    return Models(default=default, candidates=candidates)
 
 
 def _parse_scraping(raw: Any) -> Scraping:

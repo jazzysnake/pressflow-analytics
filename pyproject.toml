@@ -20,6 +20,7 @@ dependencies = [
 ml = [
     "transformers",
     "torch",
+    "sentencepiece",  # slow XLM-R tokenizer for cardiffnlp/...
     "scipy",
     "scikit-learn",
     "matplotlib",
@@ -33,6 +34,16 @@ dev = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+# CPU-only PyTorch wheel: the default torch build pulls multi-GB CUDA
+# libraries that are useless for this CPU inference/eval workflow.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pressflow"]
