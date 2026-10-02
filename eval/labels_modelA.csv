@@ -1,0 +1,221 @@
+hsz_id,label,sarcasm,panic,note
+4669646,neutral,false,false,chit-chat
+4669653,neutral,false,false,chit-chat
+4669658,neutral,true,false,sarcastic chit-chat
+4669668,neutral,false,false,chit-chat
+4669680,neutral,false,false,advice not to short
+4669694,bull,false,false,last big sell done
+4669697,bull,false,false,not worth shorting here
+4669723,neutral,false,false,chit-chat quote
+4669732,neutral,false,false,"chit-chat, returning to stock"
+4669733,bull,false,false,positive week ahead
+4845393,neutral,false,false,unclear/gibberish
+4845403,neutral,false,false,greeting
+4845402,neutral,false,false,chit-chat
+4845412,neutral,false,false,greeting
+4845424,neutral,false,false,8500 dip then target price
+4845475,neutral,false,false,question
+4845509,bear,false,false,downside scenario 7500-7100
+4845511,neutral,false,false,political off-topic
+4845581,neutral,false,false,personal attack
+4845623,bear,false,false,below 8k tomorrow
+5091591,bear,false,false,mass exit agreed
+5091636,bear,false,false,potential top follow-through
+5091676,neutral,false,false,"bounce then down, entry noted"
+5091682,bear,true,false,"heading down, joking"
+5091694,neutral,false,false,typo correction
+5091697,neutral,false,false,chit-chat
+5091699,neutral,false,false,links only
+5091709,bull,false,false,"short-term bounce, bought"
+5091724,bear,false,false,"expects further down, skips"
+5091728,bull,false,false,"must turn up, worth trying"
+5324236,bear,false,false,skeptical of 12k target
+5324244,bear,true,false,rhetorical: price too high
+5324254,bear,false,false,hopes for repeat down day
+5324259,bull,false,false,long setup
+5623260,neutral,true,false,teasing about shorting
+5623270,neutral,false,false,chit-chat
+5623444,neutral,false,false,fibo reversal level 9700
+5623705,neutral,false,false,warns against pumpers
+5624647,neutral,false,false,bare price
+5624651,neutral,false,false,question on price
+5624844,bull,false,false,10000 will speed away
+5624867,bull,false,false,"fundamentals favorable, hopeful"
+5624874,bear,false,false,"head&shoulders, short working"
+5624878,neutral,false,false,ambiguous order flow
+5944883,neutral,false,false,news off-topic
+5944935,neutral,false,false,off-topic NPL explanation
+5944961,neutral,false,false,off-topic
+5945172,neutral,false,false,off-topic question
+5945250,neutral,true,false,chit-chat
+5945263,neutral,false,false,chit-chat
+5945275,neutral,false,false,chit-chat
+5945354,neutral,false,false,observation on support
+5945598,neutral,false,false,question
+5946037,neutral,false,false,"observation, support buying"
+6435650,neutral,false,false,bare price
+6435657,neutral,false,false,bare price
+6435676,neutral,false,false,critical level
+6435685,neutral,false,false,order book request
+6435728,neutral,false,false,question
+6435745,neutral,false,false,order book dump
+6435760,neutral,false,false,bare price
+6435774,bull,false,false,bought small long
+6435785,neutral,false,false,trade frustration
+6435806,neutral,false,false,uncertain local bottom
+6853068,neutral,false,false,chit-chat
+6853274,neutral,true,false,joking about the fall
+6853284,neutral,false,false,DAX observation
+6853282,neutral,false,false,"2 TTC valuation, OTP Hold"
+6853281,bull,false,false,expects 14050 today
+6853288,bear,false,false,expects to join selloff
+6853318,neutral,false,false,waiting for US open
+6853355,neutral,false,false,thanks
+6853371,neutral,false,false,news
+6853386,neutral,false,false,fundamental rebuttal
+7110452,bear,false,false,vaccine hope fading
+7110462,bear,false,false,no more vaccine hype
+7110463,bear,false,false,"S&P tumbling, gap down"
+7110470,bear,false,false,Moderna overvalued bubble
+7110487,neutral,false,false,"elliott, ambiguous"
+7110498,bear,false,false,US beaten down
+7110513,neutral,false,false,question on direction
+7110512,neutral,false,false,no local top attack
+7110518,neutral,false,false,ambiguous
+7110522,neutral,false,false,vaccine skepticism
+7311929,neutral,false,false,greeting
+7311938,bear,false,false,quoted call: targets 8000
+7311947,bull,false,false,"expects positive day, buy"
+7311976,neutral,false,false,greeting
+7311978,neutral,false,false,bare price
+7311981,neutral,false,false,relative strength comparison
+7311985,neutral,false,false,cert knockout warning 8704
+7311992,neutral,false,false,trade chit-chat
+7311988,neutral,false,false,bare price
+7311994,neutral,false,false,correction
+7653133,bull,false,false,"buy OTP/MOL, very cheap"
+7653144,neutral,false,false,news link
+7653163,neutral,false,false,good news comment
+7653173,neutral,false,false,chit-chat
+7865348,neutral,false,false,chit-chat
+7865347,bull,false,false,up to 19500 short cert knockout
+7865349,bull,false,false,new ATH despite weak banks
+7865353,neutral,false,false,chit-chat
+7966314,neutral,false,false,politics off-topic
+7966313,neutral,false,false,politics off-topic
+7966312,neutral,false,false,politics off-topic
+7966317,neutral,false,false,off-topic joke
+7966316,neutral,false,false,politics off-topic
+7966315,bull,false,false,buy now (dip on politics)
+7966324,neutral,false,false,glad sold at 17000
+7966330,neutral,false,false,politics off-topic
+7966332,bear,false,false,news: banks lose 30bn
+7966343,neutral,false,false,chit-chat
+7992760,neutral,false,false,chit-chat
+7992813,neutral,false,false,bare price
+7992818,bull,false,false,brave shorts will be burned
+7992816,neutral,false,false,robot selling observation
+7992829,bear,false,false,worried bearish chart comes true
+7992840,neutral,false,false,robot selling again
+7992847,neutral,false,false,politics/elliott comment
+7992852,neutral,false,false,waiting to re-short
+7992853,neutral,false,false,question on closing long
+7992857,bull,false,false,"holds, 20k possible"
+8181857,bear,false,false,OTP cannot decouple from DAX
+8181856,neutral,false,false,link
+8181854,neutral,false,false,mocking justified fall
+8181863,bear,false,false,warns forum in love with stock
+8181862,bull,false,false,buying back sold shares
+8181859,bear,false,false,everything will fall
+8181870,bear,false,false,fundamental 7000 target
+8181868,neutral,false,false,question
+8181867,neutral,false,false,question
+8181866,bear,false,false,warns forum in love with stock
+8325804,neutral,false,false,"meta, moderation"
+8325811,neutral,false,false,political name-calling
+8325819,neutral,false,false,chit-chat
+8325821,neutral,false,false,chit-chat
+8325823,neutral,false,false,chit-chat
+8325826,neutral,false,false,fatalistic
+8325851,neutral,false,false,points to risk analysis
+8325858,neutral,false,false,news link
+8325873,neutral,false,false,politics off-topic
+8325874,bull,false,false,EU deal would be positive surprise
+8509977,bull,false,false,UP more likely than down
+8509984,neutral,false,false,question on S&P
+8509985,neutral,false,false,US close guess
+8509987,bear,false,false,expects break toward 3800
+8637395,neutral,false,false,cheap valuation comment
+8637416,neutral,false,false,HUF question
+8637439,bear,false,false,"bearish warning, 1000pt correction"
+8637460,neutral,true,false,sarcastic on red day
+8637465,neutral,false,false,HUF comment
+8637475,bear,false,false,collapse scenario in calculations
+8637477,neutral,false,false,question on correlations
+8637512,neutral,false,false,request for Indi
+8637520,neutral,false,false,bare price
+8637528,neutral,false,false,bare price
+8894097,neutral,false,false,bare price
+8894111,bull,false,false,boss bought at 16900 avg
+8894115,bear,false,false,worries how long DON can hold it
+8894122,neutral,true,false,sarcastic on excuses
+8894131,bear,true,false,mocks the small-lot rise
+8894146,neutral,false,false,closing auction critique
+8894162,neutral,false,false,bare price
+8894208,neutral,false,false,bare price
+8894218,neutral,false,false,bare price
+8894215,neutral,false,false,Csanyi funding mention
+9075018,neutral,false,false,order size
+9075022,neutral,false,false,order book
+9075026,neutral,false,false,"18600 possible, question"
+9075028,neutral,false,false,order book
+9075032,neutral,false,false,chit-chat
+9075031,neutral,false,false,green price
+9075033,neutral,false,false,question about big buyer
+9075037,bull,false,false,wants short squeeze
+9075040,neutral,false,false,order book / SRV
+9075052,neutral,false,false,order book
+9301179,neutral,false,false,gave up at 900
+9301187,neutral,false,false,"exited, like roulette"
+9301193,bear,false,false,"sold half, overbought pause"
+9301216,bull,false,false,could reach 25000 today
+9301243,bull,false,false,"strong, refuses to pull back"
+9301256,neutral,false,false,bare price
+9301259,bull,false,false,buying at 25k worth it
+9301278,bear,false,false,new ATH likely short-lived
+9301277,bull,false,false,keeps going up
+9301280,neutral,false,false,chit-chat
+9424299,neutral,false,false,off-topic TV
+9424302,neutral,false,false,off-topic loans
+9424304,neutral,false,false,off-topic loans
+9424305,neutral,false,false,off-topic EU
+9584293,bull,false,false,50k next summer
+9584298,neutral,true,false,mocking joke
+9584304,neutral,false,false,question on German market
+9584419,neutral,false,false,US down comment
+9584427,neutral,false,false,question
+9584460,neutral,false,false,chit-chat
+9584474,neutral,false,false,off-topic
+9584487,neutral,false,false,Dax down observation
+9584535,neutral,false,false,order book
+9584546,neutral,true,false,sarcastic VIP exit
+9805564,neutral,false,false,question
+9805569,neutral,false,false,complaint
+9805570,neutral,false,false,"slow drip, small move"
+9805574,bull,false,false,"sitting on support, up"
+9805585,neutral,false,false,meta
+9805596,neutral,false,false,venting/question
+9805602,bull,false,false,"50k+ targets, strong year"
+9805615,neutral,false,false,politics off-topic
+9805617,bull,false,false,big picture still up
+9805618,neutral,false,false,fearful but long-term
+9963438,neutral,false,false,question
+9963443,bear,false,false,expects morning fall
+9963444,bear,false,true,"huge loss, internal management fault"
+9963447,bull,false,false,bounce to 41500 next week
+9963453,bear,false,false,"re-pricing lower, fair value falls"
+9963470,neutral,false,false,drops not unprecedented
+9963469,bull,true,false,sarcastic: CEO bought 25k shares
+9963466,neutral,false,false,targets discussion
+9963472,bear,false,false,"goes below 35000, pushed down"
+9963475,neutral,false,false,chit-chat veteran
