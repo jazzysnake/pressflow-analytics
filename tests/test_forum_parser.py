@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from pressflow import schema as s
-from pressflow.forum.parser import is_root_post, parse_page
+from pressflow.forum.parser import is_root_post, parse_page, strip_non_content
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "forum_page.html"
 FIXTURE_PAGE = 67047  # oldal the fixture was fetched from
@@ -74,10 +74,10 @@ def test_reply_hsz_and_display_id_align(fixture_records):
 
 
 def test_deleted_user_fallback_used():
-    """Deleted accounts have no ``a.username``; the displayed label is used."""
+    """Deleted accounts have no ``a.username``; the real ``<span>`` label is used."""
     html = """
     <div class="comment">
-      <div class="commentdata"><i>Törölt felhasználó</i>
+      <div class="commentdata"><span>Törölt felhasználó</span>
         <span class="date" title="2006. 07. 24. 15:14">2006. 07. 24. 15:14</span>
       </div>
       <div class="prevcomment"></div>
@@ -101,6 +101,37 @@ def test_topic_opener_without_date_is_skipped():
     </div>
     """
     assert parse_page(html, 1) == []
+
+
+def test_strip_non_content_removes_scripts_and_styles_keeps_comments():
+    """T1.7: pre-processing drops script/style/link/comments, keeps comments."""
+    html = (
+        "<html><head><style>.x{color:red}</style>"
+        '<script>var</script marker="">x = 1;</script>'
+        "<link rel='stylesheet' href='x.css'></head>"
+        "<body><!-- boilerplate -->"
+        '<div class="comment" data-x="y"><div class="text"><div>hello</div></div></div>'
+        "</body></html>"
+    )
+    cleaned = strip_non_content(html)
+    assert "<script" not in cleaned.lower()
+    assert "<style" not in cleaned.lower()
+    assert "<link" not in cleaned.lower()
+    assert "boilerplate" not in cleaned
+    assert 'class="comment"' in cleaned
+    assert "hello" in cleaned
+
+
+def test_parse_page_ignores_injected_scripts():
+    """T1.7: injected script/style markup does not change extracted records."""
+    fixture_html = FIXTURE.read_text(encoding="utf-8")
+    baseline = parse_page(fixture_html, FIXTURE_PAGE)
+    injected = (
+        "<script>var data = {\"a\": \"</div>\"};</script>"
+        "<style>.comment { color: red; }</style>"
+        + fixture_html
+    )
+    assert parse_page(injected, FIXTURE_PAGE) == baseline
 
 
 def test_missing_votes_default_to_zero():

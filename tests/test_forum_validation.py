@@ -104,6 +104,33 @@ def test_posts_per_day_stats():
     assert report.posts_per_day_mean == pytest.approx(1.5)
 
 
+def test_drop_counts_surface_in_report(tmp_path):
+    """T1.6 issue 5: pre-write drop/skip counts appear in the report."""
+    rows = [_row(i, page=1 + i // 20) for i in range(40)]
+    posts = tmp_path / "posts.parquet"
+    import pyarrow.parquet as pq
+
+    pq.write_table(_table(rows), posts)
+
+    out = tmp_path / "report.md"
+    drop_counts = {
+        "comments_seen": 500,
+        "comments_skipped_no_date": 3,
+        "comments_skipped_no_key": 7,
+        "records_dropped": 2,
+        "pages_skipped": 1,
+    }
+    report = write_report(
+        posts, out, label="drop counts", drop_counts=drop_counts
+    )
+    text = out.read_text(encoding="utf-8")
+    assert "Dropped / skipped comments (pre-write)" in text
+    assert "Comments seen | 500" in text
+    assert "Skipped: no vote span / hsz_id | 7" in text
+    assert "Pages skipped (fetch failure) | 1" in text
+    assert report.drop_counts == drop_counts
+
+
 def test_write_report_creates_markdown(tmp_path):
     rows = [_row(i, page=1 + i // 20) for i in range(40)]
     posts = tmp_path / "posts.parquet"

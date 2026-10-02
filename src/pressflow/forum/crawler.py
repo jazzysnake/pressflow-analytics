@@ -24,6 +24,7 @@ import argparse
 import json
 import logging
 import os
+import shutil
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -41,7 +42,7 @@ from pressflow.forum.pagination import (
     find_start_oldal,
     newest_timestamp,
 )
-from pressflow.forum.parser import parse_page
+from pressflow.forum.parser import parse_page, parse_page_detailed
 from pressflow.forum.timestamps import BUDAPEST, parse_http_date, resolve_timestamp
 
 logger = logging.getLogger("pressflow.forum.crawler")
@@ -95,24 +96,32 @@ class CrawlStats:
 
     pages_fetched: int = 0
     pages_skipped: int = 0
+    pages_reused: int = 0
     posts_seen: int = 0
     posts_written: int = 0
     duplicates: int = 0
     ts_parse_failures: int = 0
     records_dropped: int = 0
     missing_date_header: int = 0
+    comments_seen: int = 0
+    comments_skipped_no_date: int = 0
+    comments_skipped_no_key: int = 0
     failures: list[dict[str, Any]] = field(default_factory=list)
 
     def as_dict(self) -> dict[str, Any]:
         return {
             "pages_fetched": self.pages_fetched,
             "pages_skipped": self.pages_skipped,
+            "pages_reused": self.pages_reused,
             "posts_seen": self.posts_seen,
             "posts_written": self.posts_written,
             "duplicates": self.duplicates,
             "ts_parse_failures": self.ts_parse_failures,
             "records_dropped": self.records_dropped,
             "missing_date_header": self.missing_date_header,
+            "comments_seen": self.comments_seen,
+            "comments_skipped_no_date": self.comments_skipped_no_date,
+            "comments_skipped_no_key": self.comments_skipped_no_key,
             "failures": self.failures,
         }
 
@@ -160,6 +169,12 @@ def _write_part(parts_dir: Path, sequence: int, records: Sequence[dict[str, Any]
     pq.write_table(table, tmp)
     os.replace(tmp, path)
     return path
+
+
+def _clear_parts_dir(parts_dir: Path) -> None:
+    """Remove stale part files so ``--fresh`` cannot dedupe against them (T1.6)."""
+    if parts_dir.exists():
+        shutil.rmtree(parts_dir, ignore_errors=True)
 
 
 def _load_seen_hsz_ids(parts_dir: Path) -> set[int]:
@@ -217,7 +232,10 @@ def _resolve_page(
     fallback_now: datetime,
 ) -> list[dict[str, Any]]:
     """Parse + timestamp-resolve one page into schema-ready records."""
-    records = parse_page(response.html, page_number)
+    records, parse_stats = parse_page_detailed(response.html, page_number)
+    stats.comments_seen += parse_stats.comments_seen
+    stats.comments_skipped_no_date += parse_stats.skipped_no_date
+    stats.comments_skipped_no_key += parse_stats.skipped_no_key
     stats.posts_seen += len(records)
 
     now = response.server_date
@@ -259,11 +277,14 @@ def _determine_max_oldal(
     checkpoint: dict[str, Any],
     stats: CrawlStats,
     fallback_now: datetime,
+    cache: dict[int, PageResponse],
 ) -> tuple[int, list[dict[str, Any]], datetime | None]:
     """Return ``(max_oldal, base_records, newest_ts)``.
 
     The newest page is fetched once and reused as the first page of the run, so
-    it is never fetched twice.  On resume the values come from the checkpoint.
+    it is never fetched twice.  It is cached under ``max_oldal`` so a later
+    binary-search probe of that page is served from memory.  On resume the
+    values come from the checkpoint.
     """
     if "max_oldal" in checkpoint:
         max_oldal = int(checkpoint["max_oldal"])
@@ -274,6 +295,7 @@ def _determine_max_oldal(
     response = client.fetch(None)  # bare thread URL == newest page
     stats.pages_fetched += 1
     max_oldal = discover_max_oldal(response.html)
+    cache[max_oldal] = response
     logger.info("discovered max oldal = %d", max_oldal)
     records = _resolve_page(response, max_oldal, stats, fallback_now)
     newest_ts = records[0][s.TS] if records else None
@@ -312,20 +334,26 @@ def crawl(
     fallback_now = datetime.now(timezone.utc)
     stats = CrawlStats()
 
+    if fresh:
+        _clear_parts_dir(paths.parts_dir)
     checkpoint = {} if fresh else load_checkpoint(paths.checkpoint)
     seen = _load_seen_hsz_ids(paths.parts_dir)
     sequence = int(checkpoint.get("parts", 0))
 
+    # Fetched pages are cached so binary-search probes are never re-fetched by
+    # the crawl loop (T1.6 issue 2).
+    cache: dict[int, PageResponse] = {}
+
     # 1. Newest page + max oldal (fetch once; reused as first page).
     max_oldal, base_records, newest_ts = _determine_max_oldal(
-        client, checkpoint, stats, fallback_now
+        client, checkpoint, stats, fallback_now, cache
     )
 
     # 2. Decide the stop page.
     if end_oldal is not None:
         start_oldal = end_oldal
     elif target_date is not None:
-        probe = _make_newest_ts_probe(client, fallback_now, stats)
+        probe = _make_newest_ts_probe(client, fallback_now, stats, cache)
         start_oldal = find_start_oldal(probe, target_date, max_oldal)
     else:
         start_oldal = 1
@@ -384,15 +412,21 @@ def crawl(
         if max_pages is not None and pages_attempted >= max_pages:
             break
         last_oldal = oldal
-        try:
-            response = client.fetch(oldal)
-        except FetchError as exc:
-            stats.pages_skipped += 1
-            stats.failures.append({"oldal": oldal, "error": str(exc)})
-            logger.warning("skipping oldal=%d: %s", oldal, exc)
+        cached = cache.get(oldal)
+        if cached is not None:
+            stats.pages_reused += 1
+            absorb(_resolve_page(cached, oldal, stats, fallback_now))
         else:
-            stats.pages_fetched += 1
-            absorb(_resolve_page(response, oldal, stats, fallback_now))
+            try:
+                response = client.fetch(oldal)
+            except FetchError as exc:
+                stats.pages_skipped += 1
+                stats.failures.append({"oldal": oldal, "error": str(exc)})
+                logger.warning("skipping oldal=%d: %s", oldal, exc)
+            else:
+                stats.pages_fetched += 1
+                cache[oldal] = response
+                absorb(_resolve_page(response, oldal, stats, fallback_now))
         pages_attempted += 1
         pages_in_batch += 1
         if pages_in_batch >= batch_pages:
@@ -420,23 +454,26 @@ def _make_newest_ts_probe(
     client: ForumClient,
     fallback_now: datetime,
     stats: CrawlStats,
+    cache: dict[int, PageResponse],
 ):
-    """Return a memoised ``oldal -> newest timestamp`` callable for T1.3."""
+    """Return an ``oldal -> newest timestamp`` callable for T1.3.
 
-    cache: dict[int, datetime] = {}
+    Fetched pages are stored in the shared ``cache`` so the crawl loop reuses
+    them instead of fetching the same page a second time (T1.6 issue 2).
+    """
 
     def probe(oldal: int) -> datetime:
-        if oldal in cache:
-            return cache[oldal]
-        response = client.fetch(oldal)
-        stats.pages_fetched += 1
+        response = cache.get(oldal)
+        if response is None:
+            response = client.fetch(oldal)
+            stats.pages_fetched += 1
+            cache[oldal] = response
         ts = newest_timestamp(
             parse_page(response.html, oldal),
             response.server_date or fallback_now,
         )
         if ts is None:
             raise ValueError(f"could not resolve newest timestamp for oldal={oldal}")
-        cache[oldal] = ts
         return ts
 
     return probe
@@ -483,7 +520,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.target_date:
         target_date = datetime.strptime(args.target_date, "%Y-%m-%d").replace(tzinfo=BUDAPEST)
     elif args.full:
-        checkpoint = load_checkpoint(CrawlerPaths.from_config(cfg).checkpoint)
+        checkpoint = (
+            {}
+            if args.fresh
+            else load_checkpoint(CrawlerPaths.from_config(cfg).checkpoint)
+        )
         newest = checkpoint.get("newest_ts")
         if newest:
             newest_dt = datetime.fromisoformat(newest)

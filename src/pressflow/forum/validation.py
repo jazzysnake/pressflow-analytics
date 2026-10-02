@@ -14,7 +14,7 @@ import argparse
 import json
 import statistics
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
@@ -36,6 +36,24 @@ PAGE_OUTLIER_HIGH = 30
 
 #: Calendar gap (days) that is reported as suspicious.
 GAP_DAYS = 3
+
+#: Checkpoint counters surfaced in the report (drop counts happen pre-write).
+DROP_COUNT_KEYS: tuple[str, ...] = (
+    "comments_seen",
+    "comments_skipped_no_date",
+    "comments_skipped_no_key",
+    "records_dropped",
+    "pages_skipped",
+)
+
+#: Human-readable labels for the drop-count table.
+_DROP_COUNT_LABELS: dict[str, str] = {
+    "comments_seen": "Comments seen",
+    "comments_skipped_no_date": "Skipped: no date (topic opener/widget)",
+    "comments_skipped_no_key": "Skipped: no vote span / hsz_id",
+    "records_dropped": "Dropped: missing required field",
+    "pages_skipped": "Pages skipped (fetch failure)",
+}
 
 __all__ = [
     "MIN_TEXT_RATE",
@@ -67,6 +85,7 @@ class ValidationReport:
     posts_per_day_median: float
     posts_per_day_max: int
     ts_parse_failures: int | None
+    drop_counts: dict[str, int] = field(default_factory=dict)
     violations: list[str] = field(default_factory=list)
 
     @property
@@ -108,6 +127,25 @@ class ValidationReport:
         if self.ts_parse_failures is not None:
             lines.append(f"| `ts` parse failures | {self.ts_parse_failures} |")
         lines.append("")
+
+        if self.drop_counts or self.ts_parse_failures is not None:
+            lines.append("## Dropped / skipped comments (pre-write)")
+            lines.append("")
+            lines.append("| Count | Value |")
+            lines.append("|---|---|")
+            for key in DROP_COUNT_KEYS:
+                if key in self.drop_counts:
+                    lines.append(
+                        f"| {_DROP_COUNT_LABELS[key]} | {self.drop_counts[key]} |"
+                    )
+            if self.ts_parse_failures is not None:
+                lines.append(f"| `ts` parse failures | {self.ts_parse_failures} |")
+            lines.append("")
+            lines.append(
+                "> Dropped/skipped comments never reach the Parquet write, so they "
+                "cannot fail the written-row `text`/`ts` thresholds below."
+            )
+            lines.append("")
 
         lines.append("## Missing-field rates")
         lines.append("")
@@ -184,8 +222,13 @@ def validate_table(
     table,
     *,
     ts_parse_failures: int | None = None,
+    drop_counts: Mapping[str, int] | None = None,
 ) -> ValidationReport:
-    """Compute the T1.5 validation report for a ``posts`` pyarrow table."""
+    """Compute the T1.5 validation report for a ``posts`` pyarrow table.
+
+    ``ts_parse_failures`` and ``drop_counts`` come from the crawl checkpoint and
+    make the pre-write drop/skip counts visible (T1.6 issue 5).
+    """
     total = table.num_rows
     hsz_values = [v for v in table.column(s.HSZ_ID).to_pylist() if v is not None]
     duplicate_hsz = len(hsz_values) - len(set(hsz_values))
@@ -255,6 +298,7 @@ def validate_table(
         posts_per_day_median=statistics.median(per_day) if per_day else 0.0,
         posts_per_day_max=max(per_day) if per_day else 0,
         ts_parse_failures=ts_parse_failures,
+        drop_counts=dict(drop_counts or {}),
         violations=violations,
     )
 
@@ -271,10 +315,13 @@ def write_report(
     *,
     label: str,
     ts_parse_failures: int | None = None,
+    drop_counts: Mapping[str, int] | None = None,
 ) -> ValidationReport:
     """Validate ``posts_path`` and write the markdown report to ``out_path``."""
     table = _read_posts(posts_path)
-    report = validate_table(table, ts_parse_failures=ts_parse_failures)
+    report = validate_table(
+        table, ts_parse_failures=ts_parse_failures, drop_counts=drop_counts
+    )
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(
         report.to_markdown(label=label, posts_path=posts_path), encoding="utf-8"
@@ -286,6 +333,15 @@ def _checkpoint_failures(cfg: Config) -> int | None:
     checkpoint = load_checkpoint(CrawlerPaths.from_config(cfg).checkpoint)
     value = checkpoint.get("ts_parse_failures")
     return int(value) if value is not None else None
+
+
+def _checkpoint_drop_counts(cfg: Config) -> dict[str, int]:
+    checkpoint = load_checkpoint(CrawlerPaths.from_config(cfg).checkpoint)
+    return {
+        key: int(checkpoint[key])
+        for key in DROP_COUNT_KEYS
+        if checkpoint.get(key) is not None
+    }
 
 
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -308,6 +364,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         out_path,
         label=args.label,
         ts_parse_failures=_checkpoint_failures(cfg),
+        drop_counts=_checkpoint_drop_counts(cfg),
     )
     print(
         json.dumps(
@@ -315,6 +372,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "posts": report.total_posts,
                 "pages": report.pages,
                 "duplicate_hsz": report.duplicate_hsz,
+                "drop_counts": report.drop_counts,
                 "violations": report.violations,
             },
             indent=2,
