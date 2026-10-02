@@ -12,7 +12,7 @@ opinions, not in perfect per-post classification.
 ## Decision
 
 Use pretrained sentiment models as-is, no fine-tuning. Evaluate 2–3 candidates
-on a small hand-labeled set (~100 posts) and pick one. Use continuous
+on a ~200-post eval set labeled by two independent LLM models (keep only posts where both agree) and pick one. Use continuous
 probabilities (P bull / P bear), not hard classes.
 
 **Candidates:**
