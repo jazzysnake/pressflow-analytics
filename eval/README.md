@@ -11,7 +11,7 @@ files.
 | `sample.csv` | The fixed, reproducible sample to be labeled by both models. Columns: `hsz_id, post_id, ts, text`. ~200 posts spread over the 10-year window. |
 | `sampling_log.csv` | How each page was chosen. Columns: `target_date, oldal, n_posts` — one row per target date (plus a few gap-fill rows, see below). |
 | `labels_modelA.csv` | Labels from **Model A** (implementer). Columns: `hsz_id, label, sarcasm, panic, note`. `label` ∈ {`bull`, `bear`, `neutral`}; `sarcasm`/`panic` are `true`/`false`. |
-| `labels_modelB.csv` | Labels from **Model B** (independent, different model; must not read Model A's output). Same schema. *(not yet present)* |
+| `labels_modelB.csv` | Labels from **Model B** (independent, different model; must not read Model A's output). Same schema. |
 | `eval_set.csv` | Consensus subset — rows where Models A and B agree on `label` (to be produced after Model B runs). |
 
 ## Sample construction
@@ -45,3 +45,5 @@ uv run python -m pressflow.eval_sampling
   (well under 9 months).
 - Label distribution (Model A): **bull 32 · bear 35 · neutral 153**;
   sarcasm 12, panic 1.
+- Label distribution (Model B, independent): **bull 28 · bear 28 · neutral 164**;
+  sarcasm 7, panic 1. Covers all 220 posts.

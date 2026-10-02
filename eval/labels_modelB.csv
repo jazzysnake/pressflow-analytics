@@ -1,0 +1,221 @@
+hsz_id,label,sarcasm,panic,note
+4669646,neutral,false,false,"chit-chat, no directional stance"
+4669653,neutral,false,false,"reflection on almost losing, no forecast"
+4669658,neutral,false,false,chit-chat / emoticons
+4669668,neutral,false,false,"chit-chat, no direction"
+4669680,neutral,false,false,"ribbing about shorting, no forecast"
+4669694,neutral,false,false,consolation; notes the last big month-end dumping
+4669697,bull,false,false,argues shorting OTP here is unattractive (downside limited)
+4669723,neutral,false,false,consolation + off-topic quote
+4669732,neutral,false,false,greeting / return to the stock
+4669733,bull,false,false,expects next week to start positive
+4845393,neutral,false,false,unclear/technical one-liner
+4845403,neutral,false,false,greeting
+4845402,neutral,false,false,"one-liner, no content"
+4845412,neutral,false,false,greeting
+4845424,neutral,false,false,mixed: dip to 8500 then target
+4845475,neutral,false,false,question challenging another view
+4845509,bear,false,false,expects decline to 7500-7100 then 6xxx
+4845511,neutral,false,false,political commentary
+4845581,bull,false,false,"defends OTP, mocks shorts, expects +30% after dip"
+4845623,bear,false,false,tomorrow below 8k and it stays there
+5091591,bear,false,false,agrees big industrial-scale exit/selling
+5091636,neutral,false,false,bearish candle pattern but expects small rise/sideways
+5091676,neutral,false,false,bought a bounce then expects down again (mixed)
+5091682,bear,false,false,confirms heading toward lower level
+5091694,neutral,false,false,typo correction
+5091697,neutral,false,false,oversold remark
+5091699,neutral,false,false,chart links only
+5091709,bull,false,false,"bought, expects 2-300 up"
+5091724,bear,false,false,"expects further fall, skips the buy"
+5091728,bull,false,false,"daily must turn, worth trying a long"
+5324236,bear,false,false,implies a fall is coming
+5324244,bear,true,false,ironic 'who wants to buy expensively?' implies downside
+5324254,neutral,false,false,"nostalgia, ambiguous"
+5324259,bull,false,false,placing a long entry
+5623260,neutral,true,false,taunt implying OTP falling (short profits)
+5623270,neutral,false,false,personal trading history
+5623444,neutral,false,false,"fib analysis, possible reversal, no clear side"
+5623705,bear,false,false,"warns against pumpers, expects continued falling"
+5624647,neutral,false,false,bare price
+5624651,neutral,false,false,questions a price
+5624844,bull,false,false,OTP will zoom away upward
+5624867,bull,false,false,"expects support to hold, favorable environment (mild)"
+5624874,bear,false,false,"head&shoulders top, correction down, short pays"
+5624878,neutral,false,false,observation on selling
+5944883,neutral,false,false,news link
+5944935,neutral,false,false,NPL-selling explanation
+5944961,neutral,false,false,Romania context
+5945172,neutral,false,false,question about risk
+5945250,neutral,false,false,chit-chat
+5945263,neutral,false,false,chit-chat
+5945275,neutral,false,false,chit-chat
+5945354,neutral,false,false,observation on DAX/OTP/MOL coupling
+5945598,neutral,false,false,'which wave are we in?' question
+5946037,neutral,false,false,support being applied at 350-360
+6435650,neutral,false,false,bare price
+6435657,neutral,false,false,bare price
+6435676,neutral,false,false,critical level remark
+6435685,neutral,false,false,book request + triple bottom note
+6435728,neutral,false,false,buy-or-sell question
+6435745,neutral,false,false,order book dump
+6435760,neutral,false,false,price
+6435774,bull,false,false,bought a long
+6435785,neutral,false,false,remark that short is expensive
+6435806,neutral,false,false,"uncertain question, no stance"
+6853068,neutral,false,false,observation
+6853274,neutral,false,false,joking remark
+6853284,neutral,false,false,observation
+6853282,neutral,false,false,"bank valuation analysis, rates OTP a Hold"
+6853281,bull,false,false,14050 will be hit today
+6853288,bear,false,false,expects we join the decline
+6853318,neutral,false,false,"nothing decided, waiting for US open"
+6853355,neutral,false,false,thanks
+6853371,neutral,false,false,news + green candles remark
+6853386,neutral,false,false,"argues on margins, no direction"
+7110452,bear,false,false,"vaccine 'savior' failing, 'woe to us'"
+7110462,bear,false,false,vaccine hype won't fool traders anymore
+7110463,bear,false,false,"S&P toppling, congratulates short"
+7110470,bear,false,false,"negative on MRNA: 29bn value, 0 products"
+7110487,neutral,false,false,"chart variant, no direction"
+7110498,bear,false,false,'they knocked down the USA'
+7110513,neutral,false,false,question on expectations
+7110512,neutral,false,false,no local top attack coming (mild)
+7110518,neutral,false,false,cryptic remark
+7110522,neutral,false,false,cynical on vaccine news
+7311929,neutral,false,false,greeting
+7311938,bear,false,false,"quotes bearish analysis: fall, far from bullish turn, 8000 target"
+7311947,bull,false,false,"expects positive day, close shorts, speaks from long"
+7311976,neutral,false,false,greeting
+7311978,neutral,false,false,price observation
+7311981,neutral,false,false,rotation comment
+7311985,neutral,false,false,warns of a possible push-down at open
+7311992,neutral,false,false,regret about a swap
+7311988,neutral,false,false,bare price
+7311994,neutral,false,false,correction
+7653133,bull,false,false,"time to buy OTP and MOL, very cheap"
+7653144,neutral,false,false,news link
+7653163,neutral,false,false,"'good news, thanks'"
+7653173,neutral,false,false,cryptic remark
+7865348,neutral,false,false,figure only
+7865347,bull,false,false,expects move up to 19500 (short certi knockout)
+7865349,bull,false,false,OTP new ATH despite weak bank day
+7865353,neutral,false,false,agreement
+7966314,neutral,false,false,politics
+7966313,neutral,false,false,politics
+7966312,neutral,false,false,politics
+7966317,neutral,false,false,mortgage joke
+7966316,neutral,false,false,anti-government rant
+7966315,bull,false,false,'buy now'
+7966324,bear,false,false,glad they sold at 17000+ (price lower now)
+7966330,neutral,false,false,suspicious remark
+7966332,neutral,false,false,government calculation
+7966343,neutral,false,false,missed-trade remark
+7992760,neutral,false,false,robot remark
+7992813,neutral,false,false,bare price
+7992818,neutral,false,false,"shorts pushed it down, hopes for a quick bounce back"
+7992816,neutral,false,false,robot selling remark
+7992829,neutral,false,false,warns a bear chart might win
+7992840,neutral,false,false,robot 'giving it' remark
+7992847,neutral,false,false,Elliott/politics note
+7992852,neutral,false,false,waiting for a short entry but letting price rise (mixed)
+7992853,neutral,false,false,question about closing a long
+7992857,bull,false,false,does not rule out 20k price
+8181857,bear,false,false,DAX fell; OTP can't stay independent
+8181856,neutral,false,false,link only
+8181854,neutral,false,false,defends the fall as normal
+8181863,neutral,false,false,"critical of forum/over-love, no forecast"
+8181862,bull,false,false,"buying back, also for dividend"
+8181859,bear,false,false,everything will fall
+8181870,bear,false,false,7000 realistic target price
+8181868,neutral,false,false,question about current price
+8181867,neutral,false,false,question about the book
+8181866,neutral,false,false,"critical of forum/over-love, no forecast"
+8325804,neutral,false,false,warning about being banned
+8325811,neutral,false,false,joke
+8325819,neutral,false,false,'mire?' (what for?)
+8325821,neutral,false,false,reply
+8325823,neutral,false,false,'they'll yank it somewhere'
+8325826,neutral,false,false,philosophical remark
+8325851,neutral,false,false,points to TA risk view
+8325858,neutral,false,false,news link
+8325873,neutral,false,false,EU-funds politics
+8325874,neutral,false,false,positive on EU-funds outcome (macro)
+8509977,bull,false,false,"long reading, target ~12000, up has more chance"
+8509984,neutral,false,false,"chart, outcome undecided"
+8509985,neutral,false,false,"tip on US close, nothing decided"
+8509987,bear,false,false,"ponders short, expects break to 3800"
+8637395,neutral,false,false,remark
+8637416,neutral,false,false,question on forint
+8637439,bear,false,false,"negative warning, fading buying force, 1000-pt correction"
+8637460,bear,true,false,"red across markets, ironic 'nice to win from here'"
+8637465,neutral,false,false,forint price remark
+8637475,bear,false,false,total collapse scenario in the chart
+8637477,neutral,false,false,question on OTP coupling
+8637512,neutral,false,false,request for Indi
+8637520,neutral,false,false,bare price
+8637528,neutral,false,false,open/real numbers
+8894097,neutral,false,false,bare price
+8894111,bull,false,false,"leader bought, not at expensive prices"
+8894115,neutral,false,false,"DON supports this week, worries what after Q4"
+8894122,neutral,true,false,sarcastic politics blame
+8894131,neutral,false,false,doubts small-lot purchases move the price
+8894146,neutral,false,false,critiques the closing-auction circus
+8894162,neutral,false,false,bare price
+8894208,neutral,false,false,bare price
+8894218,neutral,false,false,bare price
+8894215,neutral,false,false,'Csanyi ran out of money for now'
+9075018,neutral,false,false,volume figure
+9075022,neutral,false,false,order book
+9075026,neutral,false,false,question re 18600 and a possible correction
+9075028,neutral,false,false,order book
+9075032,neutral,false,false,'you don't want to know'
+9075031,neutral,false,false,green remark
+9075033,neutral,false,false,question re one big buyer
+9075037,bull,false,false,expects a short squeeze up
+9075040,neutral,false,false,order book
+9075052,neutral,false,false,order book
+9301179,neutral,false,false,gave up at 900
+9301187,neutral,false,false,"got out, feels like roulette"
+9301193,neutral,false,false,"sold half, expects a pause, considers re-entry"
+9301216,bull,false,false,"RSI shows bounce, could reach 25000"
+9301243,neutral,false,false,won't go back down remark
+9301256,neutral,false,false,bare price
+9301259,bull,false,false,"worth buying at 25k, bullish"
+9301278,bear,false,false,new ATH likely short-lived
+9301277,bull,false,false,keeps going up
+9301280,neutral,false,false,nobody is dumping
+9424299,neutral,false,false,off-topic
+9424302,neutral,false,false,mortgage-lawsuit rant
+9424304,neutral,false,false,"legal argument, off-topic"
+9424305,neutral,false,false,EU remark
+9584293,bull,false,false,50k next summer
+9584298,neutral,true,false,"joking nonsense, explicitly ironic"
+9584304,neutral,false,false,question on German indi
+9584419,neutral,false,false,USA minus remark
+9584427,neutral,false,false,question
+9584460,neutral,false,false,Putin-Trump remark
+9584474,neutral,false,false,traffic joke
+9584487,neutral,false,false,Dax indi figure
+9584535,neutral,false,false,order book
+9584546,neutral,false,false,"dax -2.2%, asks where OTP is"
+9805564,neutral,false,false,off-topic Vance question
+9805569,neutral,false,false,regret about holding
+9805570,neutral,false,false,"tells to learn, notes down-scenario"
+9805574,neutral,false,false,"support held, asks how far up"
+9805585,neutral,false,false,no time to give advice
+9805596,neutral,false,false,"dropped short, considers long (mixed)"
+9805602,bull,false,false,"good outlook, 50k+ targets, growth, holds long term"
+9805615,neutral,false,false,politics debate
+9805617,bull,false,false,"big picture still the rise, OTP a money factory"
+9805618,neutral,false,false,"long-term plan, mentions fear but feels better"
+9963438,neutral,false,false,question about tomorrow
+9963443,neutral,false,false,question about the size of the drop
+9963444,bear,false,true,"never took such a loss, sees internal management error, repricing down"
+9963447,bull,false,false,expects rebound to 41500 next week
+9963453,bear,false,false,"repricing lower, 200bn falls out"
+9963470,neutral,false,false,historical context: such drops are not unprecedented
+9963469,bull,true,false,"mocks bears, points to CEO insider buying"
+9963466,neutral,false,false,"technical note, leaves it to Pomperj"
+9963472,bear,false,false,goes well below 35000
+9963475,neutral,true,false,sarcastic agreement
