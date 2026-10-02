@@ -17,9 +17,37 @@ from pressflow.forum.pagination import (
 
 BUD = ZoneInfo("Europe/Budapest")
 
-#: Documented real checkpoints (ADR-0004 / T1.3), used by the sanity test.
-CHECKPOINT_OLD = (30000, datetime(2010, 11, 25, tzinfo=BUD))
-CHECKPOINT_NEW = (66773, datetime(2026, 8, 17, tzinfo=BUD))
+#: Verified live checkpoints (T1.3): ``(oldal, newest post timestamp)``.
+#: ``50666`` is the exact 10-year start for target ``2016-10-01``:
+#: newest(50666) = 2016-10-03 >= target, newest(50665) = 2016-09-30 < target.
+LIVE_CHECKPOINTS: list[tuple[int, datetime]] = [
+    (30000, datetime(2010, 11, 25, 10, 17, tzinfo=BUD)),
+    (50665, datetime(2016, 9, 30, tzinfo=BUD)),
+    (50666, datetime(2016, 10, 3, tzinfo=BUD)),
+    (66773, datetime(2026, 8, 18, tzinfo=BUD)),
+]
+TEN_YEAR_TARGET = datetime(2016, 10, 1, tzinfo=BUD)
+TEN_YEAR_START_OLDAL = 50666
+
+
+def _linear_probe(points: list[tuple[int, datetime]]):
+    """Piecewise-linear ``oldal -> newest ts`` probe through live checkpoints."""
+    xs = [point[0] for point in points]
+    stamps = [point[1] for point in points]
+
+    def probe(oldal: int) -> datetime:
+        if oldal <= xs[0]:
+            i = 0
+        elif oldal >= xs[-1]:
+            i = len(xs) - 2
+        else:
+            i = next(j for j in range(len(xs) - 1) if xs[j] <= oldal <= xs[j + 1])
+        x0, x1 = xs[i], xs[i + 1]
+        t0, t1 = stamps[i], stamps[i + 1]
+        frac = (oldal - x0) / (x1 - x0)
+        return t0 + timedelta(seconds=frac * (t1 - t0).total_seconds())
+
+    return probe
 
 
 def _pagination_html(max_linked: int) -> str:
@@ -118,19 +146,12 @@ def test_resolve_start_oldal_with_newest_html():
     )
 
 
-def test_realistic_checkpoints_yield_plausible_start():
-    """2026-10-01 minus 10 years should land near oldal ~43,000.
+def test_live_checkpoints_yield_exact_ten_year_start():
+    """The verified 10-year start for 2016-10-01 is exactly ``oldal=50666``.
 
-    The probe is a piecewise-linear model calibrated to the two documented
-    checkpoints; the assertion is a plausibility band, not an exact value
-    (exact value comes from a real crawl sanity check).
+    The probe interpolates the recorded live checkpoints; the boundary is
+    pinned by the two verified pages 50665 (2016-09-30) and 50666 (2016-10-03).
     """
-    (o1, d1), (o2, d2) = CHECKPOINT_OLD, CHECKPOINT_NEW
-    pages_per_second = (o2 - o1) / (d2 - d1).total_seconds()
-
-    def probe(oldal: int) -> datetime:
-        return d2 + timedelta(seconds=(oldal - o2) / pages_per_second)
-
-    target = datetime(2016, 10, 1, tzinfo=BUD)
-    start = find_start_oldal(probe, target, 67048)
-    assert 40_000 <= start <= 47_000
+    probe = _linear_probe(LIVE_CHECKPOINTS)
+    assert probe(50665) < TEN_YEAR_TARGET <= probe(50666)
+    assert find_start_oldal(probe, TEN_YEAR_TARGET, 67048) == TEN_YEAR_START_OLDAL

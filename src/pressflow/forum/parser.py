@@ -9,7 +9,8 @@ table below is the contract this module implements.
 Field                                      Marker
 ========================================  ==========================================
 author                                     ``a.username`` text (deleted accounts show
-                                           an ``<i>`` fallback instead)
+                                           a ``<span>Törölt felhasználó</span>``
+                                           fallback instead)
 raw timestamp                              ``span.date`` ``title`` attribute
 display post id                            ``.id`` div text ``#1340744`` (strip ``#``)
 hsz_id                                     vote span ``data-hsz_id`` attribute
@@ -28,6 +29,7 @@ tz-aware datetime later (T1.2 / T1.4).
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from typing import Any
 
 from bs4 import BeautifulSoup, Tag
@@ -40,8 +42,34 @@ _REPLY_HSZ_RE = re.compile(r"/prev/\d+/(\d+)")
 #: ``#1340744`` / ``#18`` -> integer display id.
 _HASH_INT_RE = re.compile(r"#?\s*(\d+)")
 
-#: Empty record used when a comment cannot be parsed at all.
-__all__ = ["parse_page", "is_root_post", "POST_RECORD_KEYS"]
+#: Paired non-post nodes stripped before parsing (T1.7).  Their content is
+#: CDATA-like (JS/CSS), so a non-greedy regex is safe and much faster than
+#: letting lxml build a tree for ~13 MB of markup that holds no post data.
+_PAIRED_NON_CONTENT_RE = re.compile(
+    r"<(script|style|noscript)\b[^>]*>.*?</\1\s*>",
+    re.IGNORECASE | re.DOTALL,
+)
+
+#: Void/self-contained non-post nodes (external resources).
+_LINK_RE = re.compile(r"<link\b[^>]*>", re.IGNORECASE)
+
+#: HTML comments (never hold post data).
+_HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
+
+#: Inter-tag whitespace (newline-anchored).  Real pages are ~99% indentation
+#: whitespace; removing whitespace-only text nodes that contain a newline keeps
+#: every rendered field identical (single-space text nodes are left untouched)
+#: while shrinking a 13.6 MB page to ~100 KB before parsing (T1.7).
+_INTER_TAG_WS_RE = re.compile(r">\s*\n\s*<")
+
+__all__ = [
+    "PageParseStats",
+    "parse_page",
+    "parse_page_detailed",
+    "strip_non_content",
+    "is_root_post",
+    "POST_RECORD_KEYS",
+]
 
 
 #: Ordered keys of a parsed (pre-resolution) post record.
@@ -64,17 +92,19 @@ def _int_from_text(value: str | None) -> int | None:
 def _author(comment: Tag) -> str | None:
     """Return the username, or the site's fallback for deleted accounts.
 
-    Active accounts render ``a.username``; deleted accounts render an ``<i>``
-    label (e.g. ``Törölt felhasználó``) inside ``.commentdata``.  The ``author``
-    column is non-nullable in ``POSTS_SCHEMA``, so the displayed fallback is
-    used rather than ``None``.
+    Active accounts render ``a.username``; deleted accounts render a plain
+    ``<span>Törölt felhasználó</span>`` where the username anchor would be (the
+    real markup never uses an ``<i>``).  The ``author`` column is non-nullable
+    in ``POSTS_SCHEMA``, so the displayed fallback is used rather than ``None``.
     """
     anchor = comment.select_one("a.username")
     if anchor is not None:
         text = anchor.get_text(strip=True)
         if text:
             return text
-    fallback = comment.select_one(".commentdata i")
+    # ``.date`` is the timestamp span; every other span in ``.commentdata`` is
+    # the deleted-account label.
+    fallback = comment.select_one(".commentdata span:not(.date)")
     if fallback is not None:
         text = fallback.get_text(strip=True)
         if text:
@@ -166,19 +196,62 @@ def _parse_comment(comment: Tag, page: int) -> dict[str, Any] | None:
     }
 
 
+def strip_non_content(html: str) -> str:
+    """Remove non-post markup before BeautifulSoup/lxml parses the page (T1.7).
+
+    Strips paired ``<script>`` / ``<style>`` / ``<noscript>`` blocks plus void
+    ``<link>`` tags and HTML comments, then collapses inter-tag whitespace.
+    All post fields live in ``div.comment`` nodes, so extraction is unchanged
+    while parse time drops from ~1.4 s to <0.3 s on a real 13.6 MB page.
+    """
+    html = _PAIRED_NON_CONTENT_RE.sub("", html)
+    html = _LINK_RE.sub("", html)
+    html = _HTML_COMMENT_RE.sub("", html)
+    html = _INTER_TAG_WS_RE.sub("><", html)
+    return html
+
+
+@dataclass
+class PageParseStats:
+    """Pre-write skip counters for one parsed page (T1.6 issue 5)."""
+
+    comments_seen: int = 0
+    skipped_no_date: int = 0
+    skipped_no_key: int = 0
+
+
+def parse_page_detailed(
+    html: str, page: int
+) -> tuple[list[dict[str, Any]], PageParseStats]:
+    """Like :func:`parse_page` but also reports skipped-comment counts.
+
+    Comments without a timestamp (the pinned topic opener/widgets) and comments
+    without a vote span / ``hsz_id`` natural key are dropped; the counters let
+    T1.5 surface how many records never reach the Parquet write.
+    """
+    soup = BeautifulSoup(strip_non_content(html), "lxml")
+    stats = PageParseStats()
+    records: list[dict[str, Any]] = []
+    for comment in soup.select("div.comment"):
+        stats.comments_seen += 1
+        if _raw_timestamp(comment) is None:
+            stats.skipped_no_date += 1
+            continue
+        record = _parse_comment(comment, page)
+        if record is None or record[s.HSZ_ID] is None:
+            stats.skipped_no_key += 1
+            continue
+        records.append(record)
+    return records, stats
+
+
 def parse_page(html: str, page: int) -> list[dict[str, Any]]:
     """Parse a single ``?oldal=`` response into per-post records.
 
     Posts are returned in document order (newest → oldest on the live site).
     The pinned topic opener and any comment without a natural key are skipped.
     """
-    soup = BeautifulSoup(html, "lxml")
-    records: list[dict[str, Any]] = []
-    for comment in soup.select("div.comment"):
-        record = _parse_comment(comment, page)
-        if record is not None and record[s.HSZ_ID] is not None:
-            records.append(record)
-    return records
+    return parse_page_detailed(html, page)[0]
 
 
 def is_root_post(record: dict[str, Any]) -> bool:
