@@ -425,7 +425,10 @@ def crawl(
                 logger.warning("skipping oldal=%d: %s", oldal, exc)
             else:
                 stats.pages_fetched += 1
-                cache[oldal] = response
+                # Do NOT retain crawled pages: only binary-search probe pages
+                # (and the base page) belong in ``cache``.  Caching every page
+                # would hold the full crawl's HTML in memory (~200 GB on the
+                # full ~15k-page run) and OOM.
                 absorb(_resolve_page(response, oldal, stats, fallback_now))
         pages_attempted += 1
         pages_in_batch += 1

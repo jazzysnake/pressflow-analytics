@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import gc
+import weakref
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -227,6 +229,50 @@ def test_target_date_reuses_probe_pages(tmp_path):
     assert stats.pages_reused >= 1
     table = pq.read_table(paths.posts)
     assert table.num_rows == 3 * POSTS_PER_PAGE  # pages max, max-1, start
+
+
+def test_crawl_cache_stays_bounded(tmp_path):
+    """Regression: the T1.6 probe cache must not retain crawled pages.
+
+    Before the fix the crawl loop did ``cache[oldal] = response`` for every
+    crawled page, so a full crawl kept every page's ~13.6 MB HTML alive for the
+    whole run (~200 GB → OOM).  Only binary-search probe pages (and the base
+    page) may be cached, so the number of live ``PageResponse`` objects must
+    stay flat as the crawl advances instead of growing with the page count.
+    """
+    max_oldal = 20
+
+    class TrackingClient(FakeClient):
+        """Fake client that records how many page responses stay reachable."""
+
+        def __init__(self, pages: dict[int | None, str]) -> None:
+            super().__init__(pages)
+            self._refs: list[weakref.ref] = []
+            self.max_alive = 0
+
+        def fetch(self, oldal: int | None) -> PageResponse:
+            response = super().fetch(oldal)
+            gc.collect()  # belt-and-braces; CPython frees by refcount anyway.
+            alive = sum(1 for ref in self._refs if ref() is not None)
+            self.max_alive = max(self.max_alive, alive)
+            self._refs.append(weakref.ref(response))
+            return response
+
+    pages: dict[int | None, str] = {}
+    for oldal in range(1, max_oldal + 1):
+        body = _make_page_html(_hszs(oldal))
+        if oldal == max_oldal:
+            body += _pagination(max_oldal - 1)
+            pages[None] = body
+        pages[oldal] = body
+
+    client = TrackingClient(pages)
+    crawl(client=client, paths=_paths(tmp_path), fresh=True, max_pages=100)
+
+    # Only the cached base page (~1) plus the previous loop iteration's local
+    # ``response`` (~1) stay alive.  A per-page cache would grow to ~max_oldal.
+    assert client.max_alive <= 3
+    assert client.max_alive < max_oldal
 
 
 def test_fresh_clears_stale_parts(tmp_path):
