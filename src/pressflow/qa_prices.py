@@ -1,0 +1,295 @@
+"""T2.3 — total-return QA for the price panel (ADR-0005, ADR-0011).
+
+Checks the aligned panel for adjustment anomalies and writes a markdown report
+to ``docs/reports/prices-qa.md``:
+
+* OTP dividend-adjustment dates implied by jumps in ``Adj Close / Close``;
+* USDHUF level sanity (positivity, plausible range);
+* calendar gaps on BÉT trading days and zero/negative quotes.
+
+Usage::
+
+    uv run python -m pressflow.qa_prices
+"""
+
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+
+import pandas as pd
+
+from pressflow.align_prices import processed_path
+from pressflow.config import REPO_ROOT, Config, get_config
+from pressflow.schema import (
+    DATE,
+    OTP_ADJ_CLOSE_HUF,
+    OTP_CLOSE_HUF,
+    OTP_USD,
+    PRICES_COLUMNS,
+    SPX_CLOSE,
+    SPY_ADJ_CLOSE_USD,
+    SPY_USD,
+    USDHUF,
+)
+
+logger = logging.getLogger(__name__)
+
+REPORT_REL_PATH = Path("docs") / "reports" / "prices-qa.md"
+
+#: Minimum day-over-day step in Adj Close / Close treated as a dividend event.
+DIVIDEND_THRESHOLD = 1e-4
+
+#: Plausible USDHUF range (HUF per 1 USD) for the ~decade window.
+USDHUF_LOW = 150.0
+USDHUF_HIGH = 600.0
+
+#: Calendar gaps (in days) longer than this are listed as notable.
+GAP_DAYS = 4
+
+PRICE_COLUMNS = (
+    OTP_CLOSE_HUF,
+    OTP_ADJ_CLOSE_HUF,
+    USDHUF,
+    SPY_ADJ_CLOSE_USD,
+    SPX_CLOSE,
+    OTP_USD,
+    SPY_USD,
+)
+
+
+def dividend_events(panel: pd.DataFrame, threshold: float = DIVIDEND_THRESHOLD) -> pd.DataFrame:
+    """Find OTP dividend-adjustment dates from upward steps in Adj Close / Close.
+
+    ``Adj Close`` back-adjusts prior prices downward for each dividend, so the
+    ratio ``adj/close`` steps *up* on an ex-dividend day. The step size implies
+    the payout yield ``y = 1 - ratio_{t-1} / ratio_t`` and a dividend per share
+    of roughly ``close * y``.
+    """
+    ratio = panel[OTP_ADJ_CLOSE_HUF] / panel[OTP_CLOSE_HUF]
+    step = ratio / ratio.shift(1)
+    mask = step > 1.0 + threshold
+    dates = pd.to_datetime(panel.loc[mask, DATE])
+    implied_yield = 1.0 - 1.0 / step[mask]
+    events = pd.DataFrame(
+        {
+            DATE: dates.to_numpy(),
+            "adj_close_ratio": ratio[mask].to_numpy(),
+            "implied_yield": implied_yield.to_numpy(),
+            "approx_dividend_huf": (panel.loc[mask, OTP_CLOSE_HUF] * implied_yield).to_numpy(),
+        }
+    )
+    return events.reset_index(drop=True)
+
+
+def usdhuf_anomalies(
+    panel: pd.DataFrame,
+    low: float = USDHUF_LOW,
+    high: float = USDHUF_HIGH,
+) -> pd.DataFrame:
+    """Rows where USDHUF is non-positive, NaN or outside a plausible range."""
+    rate = panel[USDHUF]
+    mask = rate.isna() | (rate <= 0) | (rate < low) | (rate > high)
+    return panel.loc[mask, [DATE, USDHUF]].reset_index(drop=True)
+
+
+def calendar_gaps(panel: pd.DataFrame, max_days: int = GAP_DAYS) -> pd.DataFrame:
+    """BÉT dates separated by more than ``max_days`` calendar days."""
+    dates = pd.to_datetime(panel[DATE]).reset_index(drop=True)
+    delta = dates.diff().dt.days
+    mask = delta > max_days
+    gaps = pd.DataFrame(
+        {
+            "previous_date": dates.shift(1)[mask].to_numpy(),
+            DATE: dates[mask].to_numpy(),
+            "gap_days": delta[mask].astype("Int64").to_numpy(),
+        }
+    )
+    return gaps.reset_index(drop=True)
+
+
+def invalid_price_rows(panel: pd.DataFrame) -> pd.DataFrame:
+    """Rows with a zero or negative value in any price column."""
+    numeric = [col for col in PRICE_COLUMNS if col in panel.columns]
+    mask = (panel[numeric] <= 0).any(axis=1)
+    return panel.loc[mask, [DATE, *numeric]].reset_index(drop=True)
+
+
+def _fmt_date(value: object) -> str:
+    return pd.Timestamp(value).strftime("%Y-%m-%d")
+
+
+def _md_table(frame: pd.DataFrame) -> str:
+    """Render a DataFrame as a GitHub-flavoured markdown table (no deps)."""
+    if frame.empty:
+        return "_none_\n"
+    headers = [str(col) for col in frame.columns]
+    rows = [[str(v) for v in row] for row in frame.itertuples(index=False, name=None)]
+    widths = [len(h) for h in headers]
+    for row in rows:
+        for i, value in enumerate(row):
+            widths[i] = max(widths[i], len(value))
+
+    def _line(cells: list[str]) -> str:
+        return "| " + " | ".join(c.ljust(widths[i]) for i, c in enumerate(cells)) + " |"
+
+    lines = [_line(headers), "|" + "|".join("-" * (w + 2) for w in widths) + "|"]
+    lines.extend(_line(row) for row in rows)
+    return "\n".join(lines) + "\n"
+
+
+def build_report(panel: pd.DataFrame) -> str:
+    """Render the markdown QA report for a panel."""
+    panel = panel.sort_values(DATE).reset_index(drop=True)
+    dates = pd.to_datetime(panel[DATE])
+    events = dividend_events(panel)
+    fx_anomalies = usdhuf_anomalies(panel)
+    gaps = calendar_gaps(panel)
+    invalid = invalid_price_rows(panel)
+
+    rate = panel[USDHUF]
+    lines: list[str] = []
+    lines.append("# Price data QA — OTP / SPY / USDHUF")
+    lines.append("")
+    lines.append(
+        "Generated by `pressflow.qa_prices` (T2.3) from "
+        "`data/processed/prices.parquet` (ADR-0005, ADR-0011)."
+    )
+    lines.append("")
+    lines.append("## Summary")
+    lines.append("")
+    lines.append(f"- Rows (BÉT trading days): **{len(panel)}**")
+    lines.append(f"- Date range: **{_fmt_date(dates.min())} → {_fmt_date(dates.max())}**")
+    lines.append(f"- Columns: `{'`, `'.join(panel.columns)}`")
+    lines.append(f"- Dividend-adjustment events detected: **{len(events)}**")
+    lines.append(f"- USDHUF anomalies: **{len(fx_anomalies)}**")
+    lines.append(f"- Calendar gaps > {GAP_DAYS} days: **{len(gaps)}**")
+    lines.append(f"- Zero/negative price rows: **{len(invalid)}**")
+    lines.append("")
+    lines.append("## OTP dividend adjustments")
+    lines.append("")
+    lines.append(
+        "Dates where `Adj Close / Close` steps up indicate yfinance applied a "
+        "dividend adjustment. The implied yield is `1 - ratio_{t-1} / ratio_t`; "
+        "the dividend per share is approximate (ex-day close × yield)."
+    )
+    lines.append("")
+    if events.empty:
+        lines.append(
+            "_No dividend adjustments detected; either OTP paid no dividends in "
+            "the window or yfinance did not adjust `OTP.BD`._"
+        )
+        lines.append("")
+    else:
+        shown = events.copy()
+        shown[DATE] = shown[DATE].map(_fmt_date)
+        shown["adj_close_ratio"] = shown["adj_close_ratio"].map(lambda v: f"{v:.4f}")
+        shown["implied_yield"] = shown["implied_yield"].map(lambda v: f"{v * 100:.2f}%")
+        shown["approx_dividend_huf"] = shown["approx_dividend_huf"].map(lambda v: f"{v:.1f}")
+        shown = shown.rename(
+            columns={
+                DATE: "date",
+                "adj_close_ratio": "Adj Close / Close",
+                "implied_yield": "implied yield",
+                "approx_dividend_huf": "~dividend (HUF)",
+            }
+        )
+        lines.append(_md_table(shown))
+    lines.append("## USDHUF sanity")
+    lines.append("")
+    lines.append(
+        f"- min **{rate.min():.2f}**, median **{rate.median():.2f}**, "
+        f"max **{rate.max():.2f}** HUF per USD"
+    )
+    lines.append(f"- expected plausible range: **{USDHUF_LOW:.0f}–{USDHUF_HIGH:.0f}**")
+    lines.append("")
+    if fx_anomalies.empty:
+        lines.append("_No USDHUF anomalies._")
+        lines.append("")
+    else:
+        shown_fx = fx_anomalies.copy()
+        shown_fx[DATE] = pd.to_datetime(shown_fx[DATE]).map(_fmt_date)
+        lines.append(_md_table(shown_fx))
+    lines.append("## Calendar gaps")
+    lines.append("")
+    if gaps.empty:
+        lines.append(f"_No BÉT gaps longer than {GAP_DAYS} calendar days._")
+        lines.append("")
+    else:
+        shown_gaps = gaps.copy()
+        shown_gaps["previous_date"] = pd.to_datetime(shown_gaps["previous_date"]).map(_fmt_date)
+        shown_gaps[DATE] = pd.to_datetime(shown_gaps[DATE]).map(_fmt_date)
+        lines.append(_md_table(shown_gaps))
+    lines.append("## Zero / negative quotes")
+    lines.append("")
+    if invalid.empty:
+        lines.append("_None._")
+        lines.append("")
+    else:
+        shown_invalid = invalid.copy()
+        shown_invalid[DATE] = pd.to_datetime(shown_invalid[DATE]).map(_fmt_date)
+        lines.append(_md_table(shown_invalid))
+    lines.append("## Caveats")
+    lines.append("")
+    lines.append(
+        "- Sustained-trend caution: `otp_usd` and `spy_usd` are price/NAV series, "
+        "not compounded return indices. Backtest comparisons must use returns, "
+        "not levels (ADR-0011)."
+    )
+    lines.append(
+        "- `Adj Close` dividend adjustment for `OTP.BD` is a yfinance "
+        "simplification and may be inaccurate for a less-covered ticker "
+        "(ADR-0005). Treat OTP total return as approximate."
+    )
+    lines.append(
+        "- FX (~0.03%) is not charged to the strategy; it only matters if SPY is "
+        "actually bought (ADR-0011)."
+    )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def report_path() -> Path:
+    """Absolute path of the QA report."""
+    return REPO_ROOT / REPORT_REL_PATH
+
+
+def run_qa(config: Config | None = None) -> str:
+    """Read the processed panel and write the QA report."""
+    config = config or get_config()
+    panel_file = processed_path(config)
+    if not panel_file.is_file():
+        raise FileNotFoundError(f"processed prices not found: {panel_file} (run T2.2 first)")
+    panel = pd.read_parquet(panel_file)
+    text = build_report(panel)
+    out = report_path()
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(text, encoding="utf-8")
+    print(f"wrote {out}")
+    return text
+
+
+def main() -> None:  # pragma: no cover - thin CLI wrapper
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    run_qa()
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()
+
+
+__all__ = [
+    "REPORT_REL_PATH",
+    "DIVIDEND_THRESHOLD",
+    "USDHUF_LOW",
+    "USDHUF_HIGH",
+    "GAP_DAYS",
+    "PRICE_COLUMNS",
+    "dividend_events",
+    "usdhuf_anomalies",
+    "calendar_gaps",
+    "invalid_price_rows",
+    "build_report",
+    "report_path",
+    "run_qa",
+]
