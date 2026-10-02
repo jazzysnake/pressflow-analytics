@@ -331,7 +331,7 @@ def build_eval_scores(
     the two special tokens; ``cardiffnlp`` ships no ``model_max_length``).
     """
     config = config or get_config()
-    model_ids = list(model_ids or config.models)
+    model_ids = list(model_ids or config.models.candidates)
     frame = eval_set if eval_set is not None else load_eval_set()
     texts = frame["text"].fillna("").astype(str).tolist()
 

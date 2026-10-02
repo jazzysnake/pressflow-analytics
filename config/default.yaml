@@ -21,11 +21,13 @@ kelly:
   shrink_gamma: 0.5
   cap: 1.0
 
-# Sentiment model ids, in preference order.
+# Sentiment models (ADR-0001): the chosen `default` plus the full candidate list.
 models:
-  - NYTK/sentiment-hts5-xlm-roberta-hungarian
-  - NYTK/sentiment-ohb3-xlm-roberta-hungarian
-  - cardiffnlp/twitter-xlm-roberta-base-sentiment
+  default: NYTK/sentiment-hts5-xlm-roberta-hungarian
+  candidates:
+    - NYTK/sentiment-hts5-xlm-roberta-hungarian
+    - NYTK/sentiment-ohb3-xlm-roberta-hungarian
+    - cardiffnlp/twitter-xlm-roberta-base-sentiment
 
 # Scraping politeness (ADR-0015 — ~0.35s delay, retry+backoff).
 scraping:
