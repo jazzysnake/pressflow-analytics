@@ -9,7 +9,7 @@ One file per task, grouped by epic folder. This index is the orchestration board
 | Epic | Folder | Goal | Tasks | Status |
 |---|---|---|---|---|
 | 00 | `epic-00-foundation/` | uv project, config, schemas | T0.1–T0.3 | Not started |
-| 01 | `epic-01-forum-scraper/` | Scrape posts → Parquet | T1.1–T1.5 | Not started |
+| 01 | `epic-01-forum-scraper/` | Scrape posts → Parquet | T1.1–T1.7 | Not started |
 | 02 | `epic-02-price-data/` | OTP/SPY/USDHUF → Parquet | T2.1–T2.3 | Not started |
 | 03 | `epic-03-sentiment-scoring/` | Off-the-shelf sentiment scores | T3.1–T3.5 | Not started |
 | 04 | `epic-04-signal-calibration/` | Daily signal + calibration | T4.1–T4.5 | Not started |
