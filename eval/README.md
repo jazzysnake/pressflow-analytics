@@ -47,3 +47,10 @@ uv run python -m pressflow.eval_sampling
   sarcasm 12, panic 1.
 - Label distribution (Model B, independent): **bull 28 · bear 28 · neutral 164**;
   sarcasm 7, panic 1. Covers all 220 posts.
+
+## Reconciliation (Model A vs Model B)
+- Agreement: 201/220 = 91.4%
+- Final eval set: `eval/eval_set.csv` (201 rows) — bull 27 · bear 25 · neutral 149
+- `sarcasm`/`panic` flags kept only where BOTH models agreed (else blank).
+- Disagreement matrix (A→B): bull→neutral 5, bear→neutral 10, neutral→bull 1, neutral→bear 3
+- Model B (Sonnet) is more conservative — fewer directional labels than Model A (deepseek-flash).
