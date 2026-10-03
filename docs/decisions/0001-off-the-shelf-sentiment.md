@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-01
+- **Amended:** 2026-10-03 — candidate model list superseded by ADR-0016 (Jev); "no fine-tuning" unchanged.
 
 ## Context
 
