@@ -184,7 +184,7 @@ def test_scoring_config_defaults():
     scoring = get_config().scoring
     assert scoring.backend == "jev"
     assert scoring.model == "jev-latest"
-    assert scoring.concurrency == 16
+    assert scoring.concurrency == 32
     assert scoring.max_consecutive_failures == 10
     assert scoring.cost_cap_usd == 9.0
     assert scoring.request_delay_sec == 0.2

@@ -45,6 +45,12 @@ scoring:
   retries: 3
   flush_every: 500
 
+# Daily signal aggregation (T4.1 — engagement-weighted, trailing 60-day z-score).
+aggregation:
+  weight_scheme: engagement
+  z_window: 60
+  z_min_periods: 30
+
 # Data locations (ADR-0015 — Parquet under data/).
 paths:
   data: data
