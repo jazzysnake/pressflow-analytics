@@ -136,6 +136,7 @@ __all__ = [
     "parse_answer",
     "score_rows_for_answers",
     "score_post",
+    "score_post_with_usage",
     "score_eval_set",
     "jev_scores_path",
     "save_jev_scores",
@@ -309,7 +310,7 @@ def _post_once(
     )
 
 
-def score_post(
+def score_post_with_usage(
     text: str,
     *,
     session: requests.Session | None = None,
@@ -318,12 +319,14 @@ def score_post(
     max_attempts: int = MAX_ATTEMPTS,
     backoff_base: float = BACKOFF_BASE_SEC,
     sleep: Any = time.sleep,
-) -> dict[str, Any]:
-    """Score one post with Jev, retrying 429/5xx with exponential backoff.
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Score one post with Jev, returning ``(answer, usage)``.
 
-    Returns the raw ``answers[QUESTION_ID]`` mapping. Raises the last
-    :class:`requests.HTTPError` / :class:`requests.RequestException` when every
-    attempt fails.
+    Identical retry behaviour to :func:`score_post` (429/5xx and network
+    errors with exponential backoff) but also returns the response's ``usage``
+    mapping (``input_tokens`` / ``output_tokens``) so callers can track cost.
+    Raises the last :class:`requests.HTTPError` /
+    :class:`requests.RequestException` when every attempt fails.
     """
     own_session = session is None
     session = session or requests.Session()
@@ -356,11 +359,43 @@ def score_post(
                 raise ValueError(
                     f"unexpected SystemOne response: missing answers.{QUESTION_ID}"
                 )
-            return dict(answers[QUESTION_ID])
+            usage = payload.get("usage")
+            return (
+                dict(answers[QUESTION_ID]),
+                dict(usage) if isinstance(usage, Mapping) else {},
+            )
         raise last_exc if last_exc else RuntimeError("unreachable")
     finally:
         if own_session:
             session.close()
+
+
+def score_post(
+    text: str,
+    *,
+    session: requests.Session | None = None,
+    api_key: str | None = None,
+    timeout: float = 120.0,
+    max_attempts: int = MAX_ATTEMPTS,
+    backoff_base: float = BACKOFF_BASE_SEC,
+    sleep: Any = time.sleep,
+) -> dict[str, Any]:
+    """Score one post with Jev, retrying 429/5xx with exponential backoff.
+
+    Returns the raw ``answers[QUESTION_ID]`` mapping. Raises the last
+    :class:`requests.HTTPError` / :class:`requests.RequestException` when every
+    attempt fails.
+    """
+    answer, _ = score_post_with_usage(
+        text,
+        session=session,
+        api_key=api_key,
+        timeout=timeout,
+        max_attempts=max_attempts,
+        backoff_base=backoff_base,
+        sleep=sleep,
+    )
+    return answer
 
 
 def score_eval_set(

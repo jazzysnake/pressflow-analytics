@@ -10,6 +10,7 @@ Usage::
     cfg = get_config()
     cfg.costs.base        # 0.003
     cfg.kelly.k           # 0.25
+    cfg.scoring.backend   # "jev"
     cfg.window_years      # 10
 
 Invalid or missing values raise :class:`ConfigError` with a clear message.
@@ -73,6 +74,20 @@ class Scraping:
 
 
 @dataclass(frozen=True)
+class Scoring:
+    """Batch scoring parameters (T3.4 — concurrent, resumable Jev runs)."""
+
+    backend: str
+    model: str
+    concurrency: int
+    max_consecutive_failures: int
+    cost_cap_usd: float
+    request_delay_sec: float
+    retries: int
+    flush_every: int
+
+
+@dataclass(frozen=True)
 class Paths:
     data: str
     raw: str
@@ -93,6 +108,7 @@ class Config:
     kelly: Kelly
     models: Models
     scraping: Scraping
+    scoring: Scoring
     paths: Paths
 
 
@@ -228,6 +244,62 @@ def _parse_scraping(raw: Any) -> Scraping:
     return Scraping(delay_sec=delay, retries=retries)
 
 
+def _parse_scoring(raw: Any) -> Scoring:
+    m = _mapping(raw, "scoring")
+    concurrency = _as_int(
+        _require(m, "concurrency", "scoring"), "scoring.concurrency"
+    )
+    if concurrency < 1:
+        raise ConfigError(
+            f"scoring.concurrency: expected a positive integer, got {concurrency}"
+        )
+    max_consecutive = _as_int(
+        _require(m, "max_consecutive_failures", "scoring"),
+        "scoring.max_consecutive_failures",
+    )
+    if max_consecutive < 1:
+        raise ConfigError(
+            "scoring.max_consecutive_failures: expected a positive integer, "
+            f"got {max_consecutive}"
+        )
+    cost_cap = _positive(
+        _as_float(
+            _require(m, "cost_cap_usd", "scoring"), "scoring.cost_cap_usd"
+        ),
+        "scoring.cost_cap_usd",
+    )
+    request_delay = _as_float(
+        _require(m, "request_delay_sec", "scoring"), "scoring.request_delay_sec"
+    )
+    if request_delay < 0:
+        raise ConfigError(
+            "scoring.request_delay_sec: expected a non-negative value, "
+            f"got {request_delay}"
+        )
+    retries = _as_int(_require(m, "retries", "scoring"), "scoring.retries")
+    if retries < 1:
+        raise ConfigError(
+            f"scoring.retries: expected a positive integer, got {retries}"
+        )
+    flush_every = _as_int(
+        _require(m, "flush_every", "scoring"), "scoring.flush_every"
+    )
+    if flush_every < 1:
+        raise ConfigError(
+            f"scoring.flush_every: expected a positive integer, got {flush_every}"
+        )
+    return Scoring(
+        backend=_as_str(_require(m, "backend", "scoring"), "scoring.backend"),
+        model=_as_str(_require(m, "model", "scoring"), "scoring.model"),
+        concurrency=concurrency,
+        max_consecutive_failures=max_consecutive,
+        cost_cap_usd=cost_cap,
+        request_delay_sec=request_delay,
+        retries=retries,
+        flush_every=flush_every,
+    )
+
+
 def _parse_paths(raw: Any) -> Paths:
     m = _mapping(raw, "paths")
     return Paths(
@@ -278,6 +350,7 @@ def load_config(path: str | os.PathLike[str] | None = None) -> Config:
         kelly=_parse_kelly(_require(root, "kelly", str(resolved))),
         models=_parse_models(_require(root, "models", str(resolved))),
         scraping=_parse_scraping(_require(root, "scraping", str(resolved))),
+        scoring=_parse_scoring(_require(root, "scoring", str(resolved))),
         paths=_parse_paths(_require(root, "paths", str(resolved))),
     )
 

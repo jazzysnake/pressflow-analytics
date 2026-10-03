@@ -34,6 +34,17 @@ scraping:
   delay_sec: 0.35
   retries: 3
 
+# Batch sentiment scoring (T3.4 — concurrent, resumable Jev runs over all posts).
+scoring:
+  backend: jev
+  model: jev-latest
+  concurrency: 16
+  max_consecutive_failures: 10
+  cost_cap_usd: 9.0
+  request_delay_sec: 0.2
+  retries: 3
+  flush_every: 500
+
 # Data locations (ADR-0015 — Parquet under data/).
 paths:
   data: data

@@ -23,6 +23,15 @@ VALID_YAML = textwrap.dedent(
         - NYTK/sentiment-ohb3-xlm-roberta-hungarian
         - cardiffnlp/twitter-xlm-roberta-base-sentiment
     scraping: { delay_sec: 0.35, retries: 3 }
+    scoring:
+      backend: jev
+      model: jev-latest
+      concurrency: 16
+      max_consecutive_failures: 10
+      cost_cap_usd: 9.0
+      request_delay_sec: 0.2
+      retries: 3
+      flush_every: 500
     paths: { data: data, raw: data/raw, processed: data/processed }
     """
 )
@@ -51,6 +60,14 @@ def test_default_config_loads():
     assert cfg.models.default in cfg.models.candidates
     assert cfg.scraping.delay_sec == 0.35
     assert cfg.scraping.retries == 3
+    assert cfg.scoring.backend == "jev"
+    assert cfg.scoring.model == "jev-latest"
+    assert cfg.scoring.concurrency == 16
+    assert cfg.scoring.max_consecutive_failures == 10
+    assert cfg.scoring.cost_cap_usd == 9.0
+    assert cfg.scoring.request_delay_sec == 0.2
+    assert cfg.scoring.retries == 3
+    assert cfg.scoring.flush_every == 500
     assert cfg.paths.data == "data"
     assert cfg.paths.raw == "data/raw"
     assert cfg.paths.processed == "data/processed"
@@ -144,3 +161,69 @@ def test_env_override(tmp_path, monkeypatch):
     path = _write(tmp_path, VALID_YAML)
     monkeypatch.setenv("PRESSFLOW_CONFIG", str(path))
     assert get_config().window_years == 10
+
+
+# --- scoring section (T3.4) ------------------------------------------------
+
+
+def test_scoring_missing_section_raises(tmp_path):
+    block = (
+        "scoring:\n"
+        "  backend: jev\n"
+        "  model: jev-latest\n"
+        "  concurrency: 16\n"
+        "  max_consecutive_failures: 10\n"
+        "  cost_cap_usd: 9.0\n"
+        "  request_delay_sec: 0.2\n"
+        "  retries: 3\n"
+        "  flush_every: 500\n"
+    )
+    with pytest.raises(ConfigError, match="missing required key 'scoring'"):
+        load_config(_write(tmp_path, VALID_YAML.replace(block, "")))
+
+
+@pytest.mark.parametrize("bad", [0, -1])
+def test_scoring_concurrency_not_positive_raises(tmp_path, bad):
+    text = VALID_YAML.replace("concurrency: 16", f"concurrency: {bad}")
+    with pytest.raises(ConfigError, match="scoring.concurrency: expected a positive"):
+        load_config(_write(tmp_path, text))
+
+
+@pytest.mark.parametrize("bad", [0, -2])
+def test_scoring_max_consecutive_failures_not_positive_raises(tmp_path, bad):
+    text = VALID_YAML.replace(
+        "max_consecutive_failures: 10", f"max_consecutive_failures: {bad}"
+    )
+    with pytest.raises(
+        ConfigError, match="scoring.max_consecutive_failures: expected a positive"
+    ):
+        load_config(_write(tmp_path, text))
+
+
+@pytest.mark.parametrize("bad", [0, -1.0])
+def test_scoring_cost_cap_not_positive_raises(tmp_path, bad):
+    text = VALID_YAML.replace("cost_cap_usd: 9.0", f"cost_cap_usd: {bad}")
+    with pytest.raises(ConfigError, match="scoring.cost_cap_usd: expected a positive"):
+        load_config(_write(tmp_path, text))
+
+
+@pytest.mark.parametrize("bad", [-0.1])
+def test_scoring_request_delay_negative_raises(tmp_path, bad):
+    text = VALID_YAML.replace("request_delay_sec: 0.2", f"request_delay_sec: {bad}")
+    with pytest.raises(
+        ConfigError, match="scoring.request_delay_sec: expected a non-negative"
+    ):
+        load_config(_write(tmp_path, text))
+
+
+@pytest.mark.parametrize("bad", [0, -1])
+def test_scoring_retries_not_positive_raises(tmp_path, bad):
+    text = VALID_YAML.replace("\n  retries: 3", f"\n  retries: {bad}")
+    with pytest.raises(ConfigError, match="scoring.retries: expected a positive"):
+        load_config(_write(tmp_path, text))
+
+
+def test_scoring_request_delay_allows_zero(tmp_path):
+    text = VALID_YAML.replace("request_delay_sec: 0.2", "request_delay_sec: 0.0")
+    cfg = load_config(_write(tmp_path, text))
+    assert cfg.scoring.request_delay_sec == 0.0
