@@ -33,6 +33,7 @@ VALID_YAML = textwrap.dedent(
       retries: 3
       flush_every: 500
     aggregation: { weight_scheme: engagement, z_window: 60, z_min_periods: 30 }
+    calibration: { features: [score_wmean], min_warmup: 120 }
     paths: { data: data, raw: data/raw, processed: data/processed }
     """
 )
@@ -72,6 +73,8 @@ def test_default_config_loads():
     assert cfg.aggregation.weight_scheme == "engagement"
     assert cfg.aggregation.z_window == 60
     assert cfg.aggregation.z_min_periods == 30
+    assert cfg.calibration.features == ("score_wmean",)
+    assert cfg.calibration.min_warmup == 120
     assert cfg.paths.data == "data"
     assert cfg.paths.raw == "data/raw"
     assert cfg.paths.processed == "data/processed"
@@ -264,5 +267,56 @@ def test_aggregation_weight_scheme_must_be_string(tmp_path):
     text = VALID_YAML.replace("weight_scheme: engagement", "weight_scheme: 7")
     with pytest.raises(
         ConfigError, match="aggregation.weight_scheme: expected a non-empty string"
+    ):
+        load_config(_write(tmp_path, text))
+
+
+# --- calibration section (T4.4) --------------------------------------------
+
+CAL_BLOCK = "calibration: { features: [score_wmean], min_warmup: 120 }\n"
+
+
+def test_calibration_missing_section_raises(tmp_path):
+    with pytest.raises(ConfigError, match="missing required key 'calibration'"):
+        load_config(_write(tmp_path, VALID_YAML.replace(CAL_BLOCK, "")))
+
+
+def test_calibration_features_empty_raises(tmp_path):
+    text = VALID_YAML.replace("features: [score_wmean]", "features: []")
+    with pytest.raises(
+        ConfigError, match="calibration.features: expected a non-empty list"
+    ):
+        load_config(_write(tmp_path, text))
+
+
+def test_calibration_features_not_a_list_raises(tmp_path):
+    text = VALID_YAML.replace("features: [score_wmean]", "features: score_wmean")
+    with pytest.raises(
+        ConfigError, match="calibration.features: expected a non-empty list"
+    ):
+        load_config(_write(tmp_path, text))
+
+
+def test_calibration_feature_must_be_string(tmp_path):
+    text = VALID_YAML.replace("features: [score_wmean]", "features: [7]")
+    with pytest.raises(
+        ConfigError, match=r"calibration.features\[0\]: expected a non-empty string"
+    ):
+        load_config(_write(tmp_path, text))
+
+
+def test_calibration_multiple_features(tmp_path):
+    text = VALID_YAML.replace(
+        "features: [score_wmean]", "features: [score_wmean, z_score]"
+    )
+    cfg = load_config(_write(tmp_path, text))
+    assert cfg.calibration.features == ("score_wmean", "z_score")
+
+
+@pytest.mark.parametrize("bad", [0, -1])
+def test_calibration_min_warmup_not_positive_raises(tmp_path, bad):
+    text = VALID_YAML.replace("min_warmup: 120", f"min_warmup: {bad}")
+    with pytest.raises(
+        ConfigError, match="calibration.min_warmup: expected a positive integer"
     ):
         load_config(_write(tmp_path, text))
