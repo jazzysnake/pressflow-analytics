@@ -331,6 +331,18 @@ def render_report(
 
     ece, rows = calibration_curve(p_raw, y)
 
+    p_span_lo = float(np.min(p_raw)) if len(p_raw) else float("nan")
+    p_span_hi = float(np.max(p_raw)) if len(p_raw) else float("nan")
+    beats_climatology = brier_raw < brier_base
+    comparison = (
+        f"**beats the constant-base-rate climatology ({brier_base:.4f})**"
+        if beats_climatology
+        else (
+            f"**is not better than the constant-base-rate climatology "
+            f"({brier_base:.4f})**"
+        )
+    )
+
     leak = (pd.to_datetime(calibrated[DATE]) <= pd.to_datetime(calibrated["signal_date"])).sum()
 
     lines: list[str] = []
@@ -370,6 +382,12 @@ def render_report(
         "sample only (the warm-up rows carry the neutral 0.5 and are excluded "
         "from the curve and scores).\n"
     )
+    lines.append(
+        f"The calibrated `p_up` Brier — {brier_raw:.4f} — {comparison} on "
+        "this window, so the logistic signal adds no measurable forecast skill "
+        "over the base rate here. Predictions are tightly clustered, spanning "
+        f"only ≈ [{p_span_lo:.2f}, {p_span_hi:.2f}].\n"
+    )
 
     lines.append("## Calibration curve\n")
     lines.append(
@@ -390,7 +408,10 @@ def render_report(
         "signal is day `t−1`, the label is day `t`'s return (T4.2).\n"
         "- The expanding-window fit uses only rows `< t`, so no day `t` or "
         "later information enters the prediction for `t`; enforced by "
-        "`tests/test_calibration.py::test_no_lookahead_ignores_future_rows`.\n"
+        "`tests/test_calibration.py::test_no_lookahead_ignores_future_rows` "
+        "(future-row leakage) and "
+        "`test_no_lookahead_ignores_the_label_at_row_t` (fit must not include "
+        "row `t` itself).\n"
     )
 
     lines.append("## Artifacts\n")

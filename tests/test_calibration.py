@@ -7,6 +7,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
+# scikit-learn is an optional extra (``uv sync --extra ml``); the calibration
+# model needs it, so skip the suite (rather than error) on a clean ``uv sync``.
+pytest.importorskip("sklearn")
+
 from pressflow.backtest import run_backtest
 from pressflow.calibrate import (
     NEUTRAL_P,
@@ -21,6 +25,7 @@ from pressflow.calibrate import (
     walk_forward_p_up,
 )
 from pressflow.config import get_config
+from pressflow.join_prices import UP
 from pressflow.schema import BUDAPEST_TZ, DATE, POSITION
 
 DAY0 = pd.Timestamp("2024-01-02", tz=BUDAPEST_TZ)
@@ -148,6 +153,32 @@ def test_no_lookahead_ignores_future_rows():
     assert not np.allclose(before[cutoff + 1 :], after[cutoff + 1 :])
 
 
+def test_no_lookahead_ignores_the_label_at_row_t():
+    """Mutation guard for a ``valid[:i+1]`` (fits row ``t`` itself) bug.
+
+    ``test_no_lookahead_ignores_future_rows`` only catches leakage of rows
+    *after* ``t``; it would still pass if the model were fit on row ``t``
+    itself. Flipping row ``t``'s own ``up`` label must therefore leave the
+    prediction for row ``t`` bit-for-bit unchanged. With the strict
+    ``valid[:i]`` window the fit set excludes ``t``, so it does; with
+    ``valid[:i+1]`` the flipped label enters the fit and the prediction moves.
+    """
+    X, y = _synthetic_signals(n=300, seed=11)
+    t = 200
+    before = walk_forward_p_up(X, y, min_warmup=40)
+
+    y_flipped = y.copy()
+    y_flipped[t] = 1 - y[t]
+    after = walk_forward_p_up(X, y_flipped, min_warmup=40)
+
+    assert before[t] == after[t]
+    assert not np.isnan(before[t])
+
+    # Sanity: ``t+1`` is fit on row ``t``, so flipping that label *must* move
+    # its prediction — otherwise the guard above would be vacuous.
+    assert before[t + 1] != after[t + 1]
+
+
 def test_monotonic_increasing_in_signal():
     X, y = _synthetic_signals(seed=3)
     out = walk_forward_p_up(X, y, min_warmup=50)
@@ -217,6 +248,20 @@ def test_backtest_consumes_raw_p_up_not_pre_shrunk():
     out = run_backtest(panel, cfg)
     assert out[POSITION].iloc[0] == pytest.approx(0.1)
 
+    # calibrate_panel must emit the *raw* walk-forward probability as `p_up`:
+    # pre-shrinking it there would double-shrink when the backtest shrinks again.
+    calibrated = calibrate_panel(_panel(), cfg)
+    raw = walk_forward_p_up(
+        calibrated[list(cfg.calibration.features)].to_numpy(dtype="float64"),
+        calibrated[UP].to_numpy(),
+        min_warmup=cfg.calibration.min_warmup,
+    )
+    expected = np.where(np.isnan(raw), NEUTRAL_P, raw)
+    np.testing.assert_allclose(calibrated[P_UP].to_numpy(), expected)
+    # The stored shrink is a different column — `p_up` is not pre-shrunk.
+    fitted = calibrated[calibrated[P_UP_FITTED]]
+    assert not np.allclose(fitted[P_UP], fitted[P_UP_SHRUNK])
+
 
 def test_report_mentions_key_artifacts_and_no_lookahead():
     cfg = get_config()
@@ -228,3 +273,17 @@ def test_report_mentions_key_artifacts_and_no_lookahead():
     assert P_UP in text and P_UP_SHRUNK in text
     # A clean synthetic panel has no signal_date >= date violations.
     assert "**0**" in text
+
+
+def test_report_states_brier_vs_climatology_honestly():
+    cfg = get_config()
+    calibrated = calibrate_panel(_panel(), cfg)
+    text = render_report(calibrated, cfg)
+    # The report must state the Brier-vs-climatology verdict plainly ...
+    assert "climatology" in text
+    assert (
+        "beats the constant-base-rate climatology" in text
+        or "is not better than the constant-base-rate climatology" in text
+    )
+    # ... and report how narrow the prediction span is.
+    assert "spanning" in text
