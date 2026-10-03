@@ -38,7 +38,7 @@ scraping:
 scoring:
   backend: jev
   model: jev-latest
-  concurrency: 16
+  concurrency: 32
   max_consecutive_failures: 10
   cost_cap_usd: 9.0
   request_delay_sec: 0.2

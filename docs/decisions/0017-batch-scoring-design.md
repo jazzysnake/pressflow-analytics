@@ -11,7 +11,7 @@ re-spend paid tokens; a transient network blip must not kill the run.
 
 ## Decision
 
-- **Concurrency**: ThreadPoolExecutor, 16 workers (configurable), ~0.2s
+- **Concurrency**: ThreadPoolExecutor, 32 workers (configurable), ~0.2s
   per-request delay; newest→oldest order.
 - **Resumability**: checkpoint sidecar of completed `hsz_id`s (JSON) plus
   read-back of the scores Parquet; flush every 500 completions and on
@@ -27,7 +27,7 @@ re-spend paid tokens; a transient network blip must not kill the run.
 
 ## Consequences
 
-- Full run ~2–4h at concurrency 16; ~$4–6 cost; resumable across disconnects;
+- Full run ~2–3h at concurrency 32; ~$4–6 cost; resumable across disconnects;
   no silent overspend.
 - `failed_hsz_ids` may leave a small tail to retry separately.
 
