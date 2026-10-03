@@ -76,6 +76,8 @@ showed sentiment mostly **co-moves** with price (same-day corr +0.34) and
 apparent multi-day "lead" was a 30-day moving-average artifact
 (autocorrelation 0.989), not prediction.
 
+![Z-scored OTP price (blue) vs 30-day rolling forum sentiment (red), 2016–2026 — sentiment tracks the big moves, but it's co-moving and reacting, not leading](docs/reports/sentiment_vs_price_zscore.png)
+
 ### It can't be traded
 
 The calibrated probability never left **[0.48, 0.58]** against a 53% base rate,
