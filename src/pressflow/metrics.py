@@ -187,8 +187,14 @@ def render_report(
     prices: pd.DataFrame,
     path: Path | None = None,
     plots_dir: Path | None = None,
+    summary: str | None = None,
 ) -> Path:
-    """Write ``docs/reports/backtest.md`` with the metrics table and plots."""
+    """Write ``docs/reports/backtest.md`` with the metrics table and plots.
+
+    ``summary`` is an optional plain-language statement of the result (wired by
+    T5.3b); when given it is rendered as a ``## Result`` section above the
+    metrics table so the report states the outcome without editorializing.
+    """
     import matplotlib
 
     matplotlib.use("Agg")
@@ -240,13 +246,18 @@ def render_report(
     fig.savefig(position_png)
     plt.close(fig)
 
+    intro = [
+        "# Backtest report",
+        "",
+        "Metrics for the long-only, costed strategy vs the SPY / OTP",
+        "buy-and-hold benchmarks (ADR-0011).",
+        "",
+    ]
+    if summary:
+        intro += ["## Result", "", summary, ""]
     body = "\n".join(
         [
-            "# Backtest report",
-            "",
-            "Metrics for the long-only, costed strategy vs the SPY / OTP",
-            "buy-and-hold benchmarks (ADR-0011).",
-            "",
+            *intro,
             _metrics_markdown(metrics),
             "",
             "## Plots",
