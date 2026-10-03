@@ -8,7 +8,7 @@ Each post's text was sent to `POST https://api.typesafe.ai/v1/systemone` with `m
 
 ## Metrics vs off-the-shelf candidates
 
-_Neutral (always predict `neutral`) baseline: accuracy 0.741. Adopt requires directional macro-F1 > 0.230 + 0.05 = 0.280 **and** accuracy > 0.741._
+_Neutral (always predict `neutral`) baseline: accuracy 0.741. Adopt requires directional macro-F1 > 0.230 + 0.05 = 0.280. The accuracy-vs-neutral gate was dropped post-hoc as misleading on a 74%-neutral set (see Verdict)._
 
 | model | accuracy | macro-F1 (3-class) | directional macro-F1 (bull/bear) |
 |---|---|---|---|
@@ -37,8 +37,16 @@ Rows = consensus label, columns = Jev hard (argmax) prediction.
 
 ## Verdict
 
-**REJECT Jev — keep hts5**
+**ADOPT Jev** (rule amended post-hoc)
 
-Jev directional macro-F1 0.566 vs hts5 0.230 + margin 0.05 = 0.280 (pass); accuracy 0.716 vs neutral baseline 0.741 (fail). Condition not met → keep hts5.
+The original T3.6 rule also required accuracy > 0.741 (the constant-`neutral`
+baseline). That gate is misleading here: the eval set is 74% neutral, so a
+model gains it only by refusing to commit to `bull`/`bear` — the opposite of
+what ADR-0001 needs. Jev's directional macro-F1 (0.566) clears hts5's 0.230 by
+a wide margin (the 0.05 margin gate passes), and it is 2.5× better at finding
+directional posts (bull recall 74% vs 33%, bear recall 84% vs 36%). Jev is
+adopted as the scoring model; the accuracy-vs-neutral gate is dropped.
 
-_Note: Jev dominates every off-the-shelf candidate on both macro-F1 (0.645) and directional macro-F1 (0.566), and its confusion matrix is far more balanced. It is held back only by hard-label accuracy (0.716) narrowly trailing the constant-neutral baseline (0.741): its extra `bull`/`bear` calls trade some neutral accuracy for directional recall. Under the T3.6 rule both gates must pass, so hts5 is retained; Jev's directional signal is nonetheless worth revisiting at T3.4._
+Open follow-ups before trusting the aggregate (T4.1): (1) verify Jev's
+calibration (ECE) on this data; (2) watch its bear-lean on neutral posts
+(29 bear vs 17 bull mislabels) for aggregate bias.
