@@ -17,3 +17,9 @@ __pycache__/
 # pi agent internals
 .pi/
 .pytest_cache/
+
+# Secrets — never commit API keys
+.env
+.env.secrets
+.env.*
+!.env.example
