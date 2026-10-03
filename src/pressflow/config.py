@@ -88,6 +88,15 @@ class Scoring:
 
 
 @dataclass(frozen=True)
+class Aggregation:
+    """Daily signal aggregation parameters (T4.1 — engagement-weighted)."""
+
+    weight_scheme: str
+    z_window: int
+    z_min_periods: int
+
+
+@dataclass(frozen=True)
 class Paths:
     data: str
     raw: str
@@ -109,6 +118,7 @@ class Config:
     models: Models
     scraping: Scraping
     scoring: Scoring
+    aggregation: Aggregation
     paths: Paths
 
 
@@ -232,6 +242,31 @@ def _parse_models(raw: Any) -> Models:
     return Models(default=default, candidates=candidates)
 
 
+def _parse_aggregation(raw: Any) -> Aggregation:
+    m = _mapping(raw, "aggregation")
+    weight_scheme = _as_str(
+        _require(m, "weight_scheme", "aggregation"), "aggregation.weight_scheme"
+    )
+    z_window = _as_int(_require(m, "z_window", "aggregation"), "aggregation.z_window")
+    if z_window < 1:
+        raise ConfigError(
+            f"aggregation.z_window: expected a positive integer, got {z_window}"
+        )
+    z_min_periods = _as_int(
+        _require(m, "z_min_periods", "aggregation"), "aggregation.z_min_periods"
+    )
+    if z_min_periods < 1 or z_min_periods > z_window:
+        raise ConfigError(
+            "aggregation.z_min_periods: expected an integer in "
+            f"[1, {z_window}], got {z_min_periods}"
+        )
+    return Aggregation(
+        weight_scheme=weight_scheme,
+        z_window=z_window,
+        z_min_periods=z_min_periods,
+    )
+
+
 def _parse_scraping(raw: Any) -> Scraping:
     m = _mapping(raw, "scraping")
     delay = _positive(
@@ -351,6 +386,7 @@ def load_config(path: str | os.PathLike[str] | None = None) -> Config:
         models=_parse_models(_require(root, "models", str(resolved))),
         scraping=_parse_scraping(_require(root, "scraping", str(resolved))),
         scoring=_parse_scoring(_require(root, "scoring", str(resolved))),
+        aggregation=_parse_aggregation(_require(root, "aggregation", str(resolved))),
         paths=_parse_paths(_require(root, "paths", str(resolved))),
     )
 
