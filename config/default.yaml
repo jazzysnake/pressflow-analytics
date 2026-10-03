@@ -51,6 +51,14 @@ aggregation:
   z_window: 60
   z_min_periods: 30
 
+# Walk-forward calibration to P(next-day up) (T4.4, ADR-0003).
+# Features are the best signal(s) from T4.3; shrink_gamma lives under kelly
+# (ADR-0009) and is reused, not duplicated.
+calibration:
+  features:
+    - score_wmean
+  min_warmup: 120
+
 # Data locations (ADR-0015 — Parquet under data/).
 paths:
   data: data

@@ -97,6 +97,14 @@ class Aggregation:
 
 
 @dataclass(frozen=True)
+class Calibration:
+    """Walk-forward calibration parameters (T4.4, ADR-0003)."""
+
+    features: tuple[str, ...]
+    min_warmup: int
+
+
+@dataclass(frozen=True)
 class Paths:
     data: str
     raw: str
@@ -119,6 +127,7 @@ class Config:
     scraping: Scraping
     scoring: Scoring
     aggregation: Aggregation
+    calibration: Calibration
     paths: Paths
 
 
@@ -335,6 +344,28 @@ def _parse_scoring(raw: Any) -> Scoring:
     )
 
 
+def _parse_calibration(raw: Any) -> Calibration:
+    m = _mapping(raw, "calibration")
+    features = _require(m, "features", "calibration")
+    if not isinstance(features, list) or not features:
+        raise ConfigError(
+            "calibration.features: expected a non-empty list, "
+            f"got {type(features).__name__}"
+        )
+    parsed = tuple(
+        _as_str(item, f"calibration.features[{i}]")
+        for i, item in enumerate(features)
+    )
+    min_warmup = _as_int(
+        _require(m, "min_warmup", "calibration"), "calibration.min_warmup"
+    )
+    if min_warmup < 1:
+        raise ConfigError(
+            f"calibration.min_warmup: expected a positive integer, got {min_warmup}"
+        )
+    return Calibration(features=parsed, min_warmup=min_warmup)
+
+
 def _parse_paths(raw: Any) -> Paths:
     m = _mapping(raw, "paths")
     return Paths(
@@ -387,6 +418,7 @@ def load_config(path: str | os.PathLike[str] | None = None) -> Config:
         scraping=_parse_scraping(_require(root, "scraping", str(resolved))),
         scoring=_parse_scoring(_require(root, "scoring", str(resolved))),
         aggregation=_parse_aggregation(_require(root, "aggregation", str(resolved))),
+        calibration=_parse_calibration(_require(root, "calibration", str(resolved))),
         paths=_parse_paths(_require(root, "paths", str(resolved))),
     )
 
